@@ -1,0 +1,9 @@
+target/
+*.class
+.env
+*.pdf
+chromadb/
+qdrant_storage/
+*.log
+.idea/
+*.iml

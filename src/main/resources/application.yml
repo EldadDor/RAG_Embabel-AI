@@ -1,0 +1,23 @@
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      embedding:
+        model: text-embedding-3-small
+      chat:
+        model: gpt-4o
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: llama3
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: rag-poc-chunks
+        initialize-schema: true
+rag:
+  chunk-size: 512
+  chunk-overlap: 80
+  top-k: 5
+  similarity-threshold: 0.75
