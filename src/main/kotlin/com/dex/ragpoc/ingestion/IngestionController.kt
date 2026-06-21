@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * REST endpoint for triggering PDF ingestion.
+ * Task 3.2 — Ingestion REST endpoint.
  *
- * Done-when gate (Task 3.2):
+ * Done-when gate:
  *   curl -s -X POST 'localhost:8080/api/ingest?path=sample-docs/infra-codebase.pdf'
- *   → JSON {"chunks": N} with N > 0
- *   AND chunks visible at http://localhost:6333/dashboard
+ *   -> {"chunks": N, "path": "..."}  with N > 0
+ *   AND collection visible at http://localhost:6333/dashboard
  */
 @RestController
 @RequestMapping("/api/ingest")
@@ -22,6 +22,12 @@ class IngestionController(
     @PostMapping
     fun ingest(@RequestParam path: String): ResponseEntity<Map<String, Any>> {
         val chunkCount = pdfIngestionService.ingestPdf(path)
-        return ResponseEntity.ok(mapOf("chunks" to chunkCount, "path" to path))
+        return ResponseEntity.ok(
+            mapOf(
+                "chunks" to chunkCount,
+                "path" to path,
+                "status" to "ingested",
+            )
+        )
     }
 }
