@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc.ingestion
+package com.dex.ragpoc.ingestion
 
 import org.slf4j.LoggerFactory
 import org.springframework.ai.document.Document

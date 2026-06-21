@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc.ingestion
+package com.dex.ragpoc.ingestion
 
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping

@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc.config
+package com.dex.ragpoc.config
 
 import org.springframework.context.annotation.Configuration
 

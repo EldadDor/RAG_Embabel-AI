@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc.adapter
+package com.dex.ragpoc.adapter
 
 import org.slf4j.LoggerFactory
 import org.springframework.ai.embedding.EmbeddingModel

@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc.model
+package com.dex.ragpoc.model
 
 data class RagQueryResponse(
     val answer: String?,

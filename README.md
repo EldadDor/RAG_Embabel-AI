@@ -56,14 +56,14 @@ RAG_Embabel-AI/
 │   ├── PLAN.md
 │   └── architecture.md
 ├── sample-docs/            ← add infra-codebase.pdf here (gitignored)
-├── src/main/kotlin/com/yourorg/ragpoc/
+├── src/main/kotlin/com/dex/ragpoc/
 │   ├── RagPocApplication.kt
 │   ├── config/
 │   ├── ingestion/
 │   ├── rag/
 │   ├── adapter/
 │   └── model/
-├── src/test/kotlin/com/yourorg/ragpoc/
+├── src/test/kotlin/com/dex/ragpoc/
 ├── docker/docker-compose.yml
 ├── pom.xml
 ├── .env.example

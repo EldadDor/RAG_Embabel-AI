@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc
+package com.dex.ragpoc
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication

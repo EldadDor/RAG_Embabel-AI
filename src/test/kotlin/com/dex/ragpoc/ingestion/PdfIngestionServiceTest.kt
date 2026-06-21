@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc.ingestion
+package com.dex.ragpoc.ingestion
 
 import io.mockk.every
 import io.mockk.mockk

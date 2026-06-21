@@ -1,6 +1,6 @@
-package com.yourorg.ragpoc.config
+package com.dex.ragpoc.config
 
-import com.yourorg.ragpoc.adapter.SpringAiVectorSearchAdapter
+import com.dex.ragpoc.adapter.SpringAiVectorSearchAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.vectorstore.VectorStore

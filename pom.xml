@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.yourorg</groupId>
+    <groupId>com.dex</groupId>
     <artifactId>RAG_Embabel-AI</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -46,18 +46,22 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+            <version>1.0.0-M6</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
+            <version>1.0.0-M6</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-qdrant-store-spring-boot-starter</artifactId>
+            <version>1.0.0-M6</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-pdf-document-reader</artifactId>
+            <version>1.0.0-M6</version>
         </dependency>
 
         <!-- Embabel RAG (all four — present from project start) -->
@@ -102,6 +106,12 @@
             <version>1.13.12</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.mockk</groupId>
+            <artifactId>mockk-jvm</artifactId>
+            <version>1.13.12</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -113,7 +123,9 @@
                 <artifactId>kotlin-maven-plugin</artifactId>
                 <version>${kotlin.version}</version>
                 <configuration>
-                    <args><arg>-Xjsr305=strict</arg></args>
+                    <args>
+                        <arg>-Xjsr305=strict</arg>
+                    </args>
                     <compilerPlugins>
                         <plugin>spring</plugin>
                         <plugin>all-open</plugin>
@@ -134,13 +146,25 @@
                 <executions>
                     <execution>
                         <id>compile</id>
-                        <goals><goal>compile</goal></goals>
-                        <configuration><sourceDirs><sourceDir>${project.basedir}/src/main/kotlin</sourceDir></sourceDirs></configuration>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirs>
+                                <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
+                            </sourceDirs>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>test-compile</id>
-                        <goals><goal>test-compile</goal></goals>
-                        <configuration><sourceDirs><sourceDir>${project.basedir}/src/test/kotlin</sourceDir></sourceDirs></configuration>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirs>
+                                <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
+                            </sourceDirs>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -148,7 +172,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.yourorg.ragpoc.RagPocApplicationKt</mainClass>
+                    <mainClass>com.dex.ragpoc.RagPocApplicationKt</mainClass>
                 </configuration>
             </plugin>
         </plugins>
@@ -156,14 +180,20 @@
 
     <repositories>
         <repository>
-            <id>spring-milestones</id><name>Spring Milestones</name>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
             <url>https://repo.spring.io/milestone</url>
-            <snapshots><enabled>false</enabled></snapshots>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <repository>
-            <id>spring-snapshots</id><name>Spring Snapshots</name>
+            <id>spring-snapshots</id>
+            <name>Spring Snapshots</name>
             <url>https://repo.spring.io/snapshot</url>
-            <releases><enabled>false</enabled></releases>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
         </repository>
     </repositories>
 </project>

@@ -1,4 +1,4 @@
-package com.yourorg.ragpoc.rag
+package com.dex.ragpoc.rag
 
 import io.mockk.every
 import io.mockk.mockk
@@ -10,7 +10,7 @@ import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
-import com.yourorg.ragpoc.model.RagQueryRequest
+import com.dex.ragpoc.model.RagQueryRequest
 
 /**
  * Unit tests for [RagController] pipeline endpoint.

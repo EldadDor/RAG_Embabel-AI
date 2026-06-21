@@ -1,7 +1,7 @@
-package com.yourorg.ragpoc.rag
+package com.dex.ragpoc.rag
 
-import com.yourorg.ragpoc.model.RagQueryRequest
-import com.yourorg.ragpoc.model.RagQueryResponse
+import com.dex.ragpoc.model.RagQueryRequest
+import com.dex.ragpoc.model.RagQueryResponse
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.vectorstore.SearchRequest
@@ -52,10 +52,10 @@ class RagController(
 
         // STOP CONDITION: verify SearchRequest.query(...).withTopK(...) exists in resolved Spring AI
         val docs = vectorStore.similaritySearch(
-            SearchRequest.query(req.question).withTopK(5)
-        )
+            SearchRequest.builder().query(req.question).topK(5).build()
+        ) ?: emptyList()
 
-        val context = docs.joinToString("\n\n") { it.content }
+        val context = docs.joinToString("\n\n") { it.text ?: "" }
         val prompt = """
             You are a helpful assistant. Use ONLY the provided context to answer.
             If the answer is not in the context, say "I don't know."
