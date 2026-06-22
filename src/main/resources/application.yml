@@ -1,23 +1,28 @@
+# ============================================================
+# Base application config — profile-agnostic
+# Active profile: local (Ollama + Qdrant) | work (Azure OpenAI + pgvector)
+# Switch via: SPRING_PROFILES_ACTIVE=work  or  -Dspring-boot.run.profiles=work
+# ============================================================
 spring:
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      embedding:
-        model: text-embedding-3-small
-      chat:
-        model: gpt-4o
-    ollama:
-      base-url: http://localhost:11434
-      chat:
-        model: llama3
-    vectorstore:
-      qdrant:
-        host: localhost
-        port: 6334
-        collection-name: rag-poc-chunks
-        initialize-schema: true
+  application:
+    name: rag-embabel-poc
+  profiles:
+    active: local   # default; override with env var SPRING_PROFILES_ACTIVE=work
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# ── RAG tuning (profile-independent) ────────────────────────
 rag:
-  chunk-size: 512
-  chunk-overlap: 80
-  top-k: 5
-  similarity-threshold: 0.75
+  chunk-size: ${RAG_CHUNK_SIZE:512}
+  chunk-overlap: ${RAG_CHUNK_OVERLAP:80}
+  top-k: ${RAG_TOP_K:5}
+  similarity-threshold: ${RAG_SIMILARITY_THRESHOLD:0.75}
+  collection-name: ${RAG_COLLECTION:rag-poc-chunks}
+
+# ── Logging ─────────────────────────────────────────────────
+logging:
+  level:
+    com.dex.ragpoc: DEBUG
+    org.springframework.ai: INFO
+    org.springframework.ai.vectorstore: DEBUG

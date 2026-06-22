@@ -1,0 +1,62 @@
+# ============================================================
+# WORK profile — Azure OpenAI (embed + chat) + PostgreSQL/pgvector
+# Start infra:  docker-compose -f docker/docker-compose-work.yml up -d
+# Run app:      SPRING_PROFILES_ACTIVE=work mvn spring-boot:run
+#
+# Required env vars:
+#   AZURE_OPENAI_ENDPOINT              e.g. https://<resource>.openai.azure.com
+#   AZURE_OPENAI_API_KEY
+#   AZURE_OPENAI_EMBED_DEPLOYMENT      default: text-embedding-ada-002
+#   AZURE_OPENAI_CHAT_DEPLOYMENT       default: gpt-4o
+#   PGVECTOR_HOST / PGVECTOR_PORT / PGVECTOR_DB
+#   PGVECTOR_USER / PGVECTOR_PASSWORD
+# ============================================================
+spring:
+  ai:
+    azure:
+      openai:
+        endpoint: ${AZURE_OPENAI_ENDPOINT}
+        api-key: ${AZURE_OPENAI_API_KEY}
+
+        # ── Embedding (1536-dim for ada-002 / text-embedding-3-small) ──
+        embedding:
+          deployment-name: ${AZURE_OPENAI_EMBED_DEPLOYMENT:text-embedding-ada-002}
+
+        # ── Chat model ─────────────────────────────────────────────────
+        chat:
+          deployment-name: ${AZURE_OPENAI_CHAT_DEPLOYMENT:gpt-4o}
+          options:
+            temperature: 0.2
+            max-tokens: 2048
+
+    # ── Vector store: pgvector ───────────────────────────────────────────
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536           # must match embedding model output
+        table-name: ${RAG_COLLECTION:rag_poc_chunks}
+        initialize-schema: true    # creates table + index on startup
+        schema-name: public
+
+  # ── PostgreSQL datasource ─────────────────────────────────────────────
+  datasource:
+    url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:ragpoc}
+    username: ${PGVECTOR_USER:raguser}
+    password: ${PGVECTOR_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none               # pgvector store manages its own schema
+    show-sql: false
+
+logging:
+  level:
+    org.springframework.ai.azure: DEBUG
+    com.zaxxer.hikari: INFO

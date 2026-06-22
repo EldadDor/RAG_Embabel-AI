@@ -1,0 +1,36 @@
+# ============================================================
+# WORK profile infra — PostgreSQL 16 + pgvector extension
+#
+# NOTE: Azure OpenAI is a cloud service — no container needed.
+# This compose file only provisions the local pgvector DB
+# for work-profile testing without needing a remote Postgres.
+#
+# Usage:
+#   docker-compose -f docker/docker-compose-work.yml up -d
+#   docker-compose -f docker/docker-compose-work.yml down -v  (wipe data)
+# ============================================================
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rag-postgres
+    environment:
+      POSTGRES_DB: ${PGVECTOR_DB:-ragpoc}
+      POSTGRES_USER: ${PGVECTOR_USER:-raguser}
+      POSTGRES_PASSWORD: ${PGVECTOR_PASSWORD:-changeme}  # override in .env
+    ports:
+      - "${PGVECTOR_PORT:-5432}:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+      - ./init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGVECTOR_USER:-raguser} -d ${PGVECTOR_DB:-ragpoc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgvector_data:
+    driver: local
