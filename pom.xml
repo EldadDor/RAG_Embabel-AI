@@ -23,6 +23,7 @@
         <java.version>21</java.version>
         <kotlin.version>2.0.21</kotlin.version>
         <spring-ai.version>1.0.0</spring-ai.version>
+        <spring-ai.milestone.version>1.0.0-M6</spring-ai.milestone.version>
         <embabel.version>0.4.0</embabel.version>
     </properties>
 
@@ -39,32 +40,71 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- ======================================================= -->
+        <!-- Web                                                       -->
+        <!-- ======================================================= -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
-            <version>1.0.0-M6</version>
-        </dependency>
+
+        <!-- ======================================================= -->
+        <!-- Spring AI — LOCAL profile (Ollama)                       -->
+        <!-- ======================================================= -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
-            <version>1.0.0-M6</version>
+            <version>${spring-ai.milestone.version}</version>
         </dependency>
+
+        <!-- Vector store: Qdrant (local profile) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-qdrant-store-spring-boot-starter</artifactId>
-            <version>1.0.0-M6</version>
+            <version>${spring-ai.milestone.version}</version>
         </dependency>
+
+        <!-- ======================================================= -->
+        <!-- Spring AI — WORK profile (Azure OpenAI + pgvector)       -->
+        <!-- ======================================================= -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-azure-openai-spring-boot-starter</artifactId>
+            <version>${spring-ai.milestone.version}</version>
+        </dependency>
+
+        <!-- Vector store: PostgreSQL/pgvector (work profile) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pgvector-store-spring-boot-starter</artifactId>
+            <version>${spring-ai.milestone.version}</version>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver (work profile) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- JPA (required by pgvector store starter) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- ======================================================= -->
+        <!-- Spring AI — shared                                        -->
+        <!-- ======================================================= -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-pdf-document-reader</artifactId>
-            <version>1.0.0-M6</version>
+            <version>${spring-ai.milestone.version}</version>
         </dependency>
 
-        <!-- Embabel RAG (all four — present from project start) -->
+        <!-- ======================================================= -->
+        <!-- Embabel RAG (all four — present from project start)      -->
+        <!-- ======================================================= -->
         <dependency>
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-rag-core</artifactId>
@@ -86,6 +126,9 @@
             <version>${embabel.version}</version>
         </dependency>
 
+        <!-- ======================================================= -->
+        <!-- Kotlin                                                    -->
+        <!-- ======================================================= -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
@@ -95,6 +138,9 @@
             <artifactId>kotlin-stdlib</artifactId>
         </dependency>
 
+        <!-- ======================================================= -->
+        <!-- Test                                                      -->
+        <!-- ======================================================= -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -146,24 +192,16 @@
                 <executions>
                     <execution>
                         <id>compile</id>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
+                        <goals><goal>compile</goal></goals>
                         <configuration>
-                            <sourceDirs>
-                                <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
-                            </sourceDirs>
+                            <sourceDirs><sourceDir>${project.basedir}/src/main/kotlin</sourceDir></sourceDirs>
                         </configuration>
                     </execution>
                     <execution>
                         <id>test-compile</id>
-                        <goals>
-                            <goal>test-compile</goal>
-                        </goals>
+                        <goals><goal>test-compile</goal></goals>
                         <configuration>
-                            <sourceDirs>
-                                <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
-                            </sourceDirs>
+                            <sourceDirs><sourceDir>${project.basedir}/src/test/kotlin</sourceDir></sourceDirs>
                         </configuration>
                     </execution>
                 </executions>
@@ -183,17 +221,13 @@
             <id>spring-milestones</id>
             <name>Spring Milestones</name>
             <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
+            <snapshots><enabled>false</enabled></snapshots>
         </repository>
         <repository>
             <id>spring-snapshots</id>
             <name>Spring Snapshots</name>
             <url>https://repo.spring.io/snapshot</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
+            <releases><enabled>false</enabled></releases>
         </repository>
     </repositories>
 </project>
