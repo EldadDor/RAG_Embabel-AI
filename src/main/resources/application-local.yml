@@ -1,38 +1,55 @@
 # ============================================================
-# LOCAL profile — Ollama (nomic-embed-text + llama3) + Qdrant
-# Start infra:  docker-compose -f docker/docker-compose.yml up -d
-# Run app:      SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
+# LOCAL profile — Ollama (mxbai-embed-large + llama3.2:3b) + Qdrant
+#
+# Topology:
+#   Desktop (this machine) : Ollama  → http://localhost:11434
+#   Laptop  (10.100.102.12): Qdrant  → http://10.100.102.12:6333  (REST)
+#                                       http://10.100.102.12:6334  (gRPC — Spring AI)
+#
+# Start app:
+#   SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
+#
+# Pre-flight checklist:
+#   ollama pull mxbai-embed-large
+#   ollama pull llama3.2:3b
+#   curl http://10.100.102.12:6333/healthz   <- must return 200
 # ============================================================
 spring:
   ai:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
 
-      # ── Embedding model (768-dim) ────────────────────────
+      # -- Embedding model (1024-dim) --------------------------------
+      # mxbai-embed-large produces 1024-dim vectors.
+      # Qdrant collection is auto-created with 1024 dims on first ingest.
       embedding:
-        model: ${OLLAMA_EMBED_MODEL:nomic-embed-text}
+        model: ${OLLAMA_EMBED_MODEL:mxbai-embed-large}
         options:
-          num-ctx: 8192
+          num-ctx: 512            # embedding context; 512 is enough for chunks
 
-      # ── Chat model ───────────────────────────────────────
+      # -- Chat model ------------------------------------------------
+      # llama3.2:3b @ Q4 ≈ 2.3 GB VRAM — fast on RTX 3050 (~30 tok/s)
+      # Swap back to qwen2.5:7b if quality matters more than speed.
       chat:
-        model: ${OLLAMA_CHAT_MODEL:llama3}
+        model: ${OLLAMA_CHAT_MODEL:llama3.2:3b}
         options:
-          temperature: 0.2
-          num-ctx: 4096
+          temperature: 0.1        # low temp = factual RAG answers
+          num-ctx: 2048           # enough for 5 chunks + question
+          num-predict: 512        # cap response length for speed
 
-    # ── Vector store: Qdrant ─────────────────────────────────
+    # -- Vector store: Qdrant (on laptop) ---------------------------
+    # Spring AI uses the gRPC port (6334) for all VectorStore operations.
+    # REST port (6333) is only for healthchecks and the dashboard UI.
     vectorstore:
       qdrant:
-        host: ${QDRANT_HOST:localhost}
-        port: ${QDRANT_GRPC_PORT:6334}          # Spring AI uses gRPC port
+        host: ${QDRANT_HOST:10.100.102.12}
+        port: ${QDRANT_GRPC_PORT:6334}          # <-- gRPC, not 6333
         collection-name: ${RAG_COLLECTION:rag-poc-chunks-local}
         initialize-schema: true
-        # NOTE: nomic-embed-text produces 768-dim vectors.
-        # Qdrant auto-detects dimensions on first vectorStore.add() call.
-        # A separate collection (rag-poc-chunks-local) avoids conflicts
-        # with the work profile's 1536-dim pgvector table.
+        # mxbai-embed-large = 1024 dims (NOT 768 like nomic-embed-text)
+        # Qdrant auto-detects on first vectorStore.add() call.
 
 logging:
   level:
     org.springframework.ai.ollama: DEBUG
+    org.springframework.ai.vectorstore.qdrant: DEBUG
