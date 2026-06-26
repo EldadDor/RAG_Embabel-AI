@@ -15,6 +15,12 @@
 #   curl http://10.100.102.12:6333/healthz   <- must return 200
 # ============================================================
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.ai.autoconfigure.azure.openai.AzureOpenAiAutoConfiguration
   ai:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}

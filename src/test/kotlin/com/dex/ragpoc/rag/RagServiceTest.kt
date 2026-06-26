@@ -1,7 +1,6 @@
 package com.dex.ragpoc.rag
 
 import com.dex.ragpoc.model.RagQueryRequest
-import io.mockk.Disabled
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

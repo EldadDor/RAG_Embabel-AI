@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
+        <version>3.5.7</version>
         <relativePath/>
     </parent>
 
@@ -23,7 +23,6 @@
         <java.version>21</java.version>
         <kotlin.version>2.0.21</kotlin.version>
         <spring-ai.version>1.0.0</spring-ai.version>
-        <spring-ai.milestone.version>1.0.0-M6</spring-ai.milestone.version>
         <embabel.version>0.4.0</embabel.version>
     </properties>
 
@@ -40,6 +39,12 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+
         <!-- ======================================================= -->
         <!-- Web                                                       -->
         <!-- ======================================================= -->
@@ -49,61 +54,15 @@
         </dependency>
 
         <!-- ======================================================= -->
-        <!-- Spring AI — LOCAL profile (Ollama)                       -->
-        <!-- ======================================================= -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
-            <version>${spring-ai.milestone.version}</version>
-        </dependency>
-
-        <!-- Vector store: Qdrant (local profile) -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-qdrant-store-spring-boot-starter</artifactId>
-            <version>${spring-ai.milestone.version}</version>
-        </dependency>
-
-        <!-- ======================================================= -->
-        <!-- Spring AI — WORK profile (Azure OpenAI + pgvector)       -->
-        <!-- ======================================================= -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-azure-openai-spring-boot-starter</artifactId>
-            <version>${spring-ai.milestone.version}</version>
-        </dependency>
-
-        <!-- Vector store: PostgreSQL/pgvector (work profile) -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-pgvector-store-spring-boot-starter</artifactId>
-            <version>${spring-ai.milestone.version}</version>
-        </dependency>
-
-        <!-- PostgreSQL JDBC driver (work profile) -->
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- JPA (required by pgvector store starter) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-
-        <!-- ======================================================= -->
         <!-- Spring AI — shared                                        -->
         <!-- ======================================================= -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-pdf-document-reader</artifactId>
-            <version>${spring-ai.milestone.version}</version>
         </dependency>
 
         <!-- ======================================================= -->
-        <!-- Embabel RAG (all four — present from project start)      -->
+        <!-- Embabel RAG                                               -->
         <!-- ======================================================= -->
         <dependency>
             <groupId>com.embabel.agent</groupId>
@@ -124,6 +83,33 @@
             <groupId>com.embabel.agent</groupId>
             <artifactId>embabel-agent-rag-tika</artifactId>
             <version>${embabel.version}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-chat-memory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-ollama</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-qdrant</artifactId>
         </dependency>
 
         <!-- ======================================================= -->
