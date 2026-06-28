@@ -26,10 +26,8 @@ spring:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
 
       # -- Embedding model (1024-dim) --------------------------------
-      # mxbai-embed-large produces 1024-dim vectors.
-      # Qdrant collection is auto-created with 1024 dims on first ingest.
       embedding:
-        model: ${OLLAMA_EMBED_MODEL:mxbai-embed-large}
+        model: ${OLLAMA_EMBED_MODEL:nomic-embed-text}
         options:
           num-ctx: 512            # embedding context; 512 is enough for chunks
 

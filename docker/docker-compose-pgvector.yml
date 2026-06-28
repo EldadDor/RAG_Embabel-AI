@@ -1,0 +1,43 @@
+# docker/docker-compose-pgvector.yml
+#
+# Starts PostgreSQL with pgvector enabled for local RAG testing.
+#
+# Start:
+#   docker-compose -f docker/docker-compose-pgvector.yml up -d
+#
+# Stop:
+#   docker-compose -f docker/docker-compose-pgvector.yml down
+#
+# Reset database completely:
+#   docker-compose -f docker/docker-compose-pgvector.yml down -v
+#
+# Connect:
+#   docker exec -it rag-postgres-pgvector psql -U rag_app -d ragdb
+#
+# JDBC URL:
+#   jdbc:postgresql://localhost:5432/ragdb
+
+version: "3.9"
+
+services:
+  postgres-pgvector:
+    image: docker.io/pgvector/pgvector:pg16
+    container_name: rag-postgres-pgvector
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ragdb
+      POSTGRES_USER: rag_app
+      POSTGRES_PASSWORD: rag_app_password
+    volumes:
+      - rag_pgvector_data:/var/lib/postgresql/data
+      - ./postgres/init-rag-pgvector.sql:/docker-entrypoint-initdb.d/001-init-rag-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_app -d ragdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  rag_pgvector_data:
