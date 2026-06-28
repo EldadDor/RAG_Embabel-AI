@@ -15,25 +15,22 @@ import org.springframework.context.annotation.Profile
  *
  * Does NOT define VectorStore or EmbeddingModel beans — those are
  * auto-configured by spring-ai-ollama-spring-boot-starter and
- * spring-ai-qdrant-store-spring-boot-starter from application-local.yml.
+ * spring-ai-pgvector-store-spring-boot-starter from application-local.yml.
  */
 @Configuration
 @Profile("local")
 class LocalAiConfig(
-    @Value("\${spring.ai.ollama.base-url:http://localhost:11434}")
+    @Value("\${spring.ai.ollama.base-url:http://10.100.102.12:11434}")
     private val ollamaBaseUrl: String,
 
     @Value("\${spring.ai.ollama.embedding.model:nomic-embed-text}")
     private val embeddingModel: String,
 
-    @Value("\${spring.ai.ollama.chat.model:llama3}")
+    @Value("\${spring.ai.ollama.chat.model:llama3.2:3b}")
     private val chatModel: String,
 
-    @Value("\${spring.ai.vectorstore.qdrant.host:localhost}")
-    private val qdrantHost: String,
-
-    @Value("\${spring.ai.vectorstore.qdrant.port:6334}")
-    private val qdrantPort: Int,
+    @Value("\${spring.datasource.url:jdbc:postgresql://localhost:5432/ragdb}")
+    private val pgvectorUrl: String,
 ) {
     private val log = LoggerFactory.getLogger(LocalAiConfig::class.java)
 
@@ -42,7 +39,7 @@ class LocalAiConfig(
         log.info("======================================================")
         log.info(" PROFILE: local")
         log.info(" Ollama   : {}  (chat: {}, embed: {})", ollamaBaseUrl, chatModel, embeddingModel)
-        log.info(" Qdrant   : {}:{} (gRPC)", qdrantHost, qdrantPort)
+        log.info(" pgvector : {}", pgvectorUrl)
         log.info(" Embed dim: 768  (nomic-embed-text)")
         log.info(" NOTE: Pull models before first run:")
         log.info("   ollama pull {}  &&  ollama pull {}", chatModel, embeddingModel)

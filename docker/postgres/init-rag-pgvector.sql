@@ -1,13 +1,4 @@
 -- docker/postgres/init-rag-pgvector.sql
---
--- Initializes PostgreSQL for local RAG testing with pgvector.
---
--- This script is automatically executed only when the PostgreSQL data volume
--- is created for the first time.
---
--- If you change this file and want it to run again:
---   docker-compose -f docker/docker-compose-pgvector.yml down -v
---   docker-compose -f docker/docker-compose-pgvector.yml up -d
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -17,7 +8,7 @@ CREATE TABLE IF NOT EXISTS rag.document_chunks (
                                                    id UUID PRIMARY KEY,
                                                    content TEXT NOT NULL,
                                                    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-                                                   embedding VECTOR(1024) NOT NULL,
+                                                   embedding VECTOR(768) NOT NULL,          -- nomic-embed-text = 768 dims
     source VARCHAR(1000),
     page_number INTEGER,
     chunk_index INTEGER,

@@ -1,59 +1,59 @@
 # ============================================================
-# LOCAL profile — Ollama (mxbai-embed-large + llama3.2:3b) + Qdrant
+# LOCAL profile — Ollama (nomic-embed-text + llama3.2:3b) on laptop + pgvector locally
 #
 # Topology:
-#   Desktop (this machine) : Ollama  → http://localhost:11434
-#   Laptop  (10.100.102.12): Qdrant  → http://10.100.102.12:6333  (REST)
-#                                       http://10.100.102.12:6334  (gRPC — Spring AI)
+#   Laptop  (10.100.102.12): Ollama  → http://10.100.102.12:11434  (embedding + chat)
+#   Desktop (this machine) : pgvector → localhost:5432
 #
 # Start app:
 #   SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
 #
 # Pre-flight checklist:
-#   ollama pull mxbai-embed-large
-#   ollama pull llama3.2:3b
-#   curl http://10.100.102.12:6333/healthz   <- must return 200
+#   On laptop: ollama pull nomic-embed-text  &&  ollama pull llama3.2:3b
+#   On desktop: docker-compose -f docker/docker-compose-pgvector.yml up -d
+#   curl http://10.100.102.12:11434          <- must respond
 # ============================================================
 spring:
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
       - org.springframework.ai.model.chat.memory.repository.jdbc.autoconfigure.JdbcChatMemoryRepositoryAutoConfiguration
+
+  datasource:
+    url: ${PGVECTOR_URL:jdbc:postgresql://localhost:5432/ragdb}
+    username: ${PGVECTOR_USER:rag_app}
+    password: ${PGVECTOR_PASSWORD:rag_app_password}
+    driver-class-name: org.postgresql.Driver
+
   ai:
     ollama:
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      base-url: ${OLLAMA_BASE_URL:http://10.100.102.12:11434}
 
-      # -- Embedding model (1024-dim) --------------------------------
+      # -- Embedding model (768-dim) ---------------------------------
+      # nomic-embed-text produces 768-dim vectors.
       embedding:
         model: ${OLLAMA_EMBED_MODEL:nomic-embed-text}
         options:
-          num-ctx: 512            # embedding context; 512 is enough for chunks
+          num-ctx: 512
 
       # -- Chat model ------------------------------------------------
-      # llama3.2:3b @ Q4 ≈ 2.3 GB VRAM — fast on RTX 3050 (~30 tok/s)
-      # Swap back to qwen2.5:7b if quality matters more than speed.
       chat:
         model: ${OLLAMA_CHAT_MODEL:llama3.2:3b}
         options:
-          temperature: 0.1        # low temp = factual RAG answers
-          num-ctx: 2048           # enough for 5 chunks + question
-          num-predict: 512        # cap response length for speed
+          temperature: 0.1
+          num-ctx: 2048
+          num-predict: 512
 
-    # -- Vector store: Qdrant (on laptop) ---------------------------
-    # Spring AI uses the gRPC port (6334) for all VectorStore operations.
-    # REST port (6333) is only for healthchecks and the dashboard UI.
+    # -- Vector store: pgvector (local Docker) ----------------------
     vectorstore:
-      qdrant:
-        host: ${QDRANT_HOST:10.100.102.12}
-        port: ${QDRANT_GRPC_PORT:6334}          # <-- gRPC, not 6333
-        collection-name: ${RAG_COLLECTION:rag-poc-chunks-local}
-        initialize-schema: true
-        # mxbai-embed-large = 1024 dims (NOT 768 like nomic-embed-text)
-        # Qdrant auto-detects on first vectorStore.add() call.
+      pgvector:
+        schema-name: rag
+        table-name: document_chunks
+        dimensions: 768                     # nomic-embed-text = 768 dims
+        distance-type: COSINE_DISTANCE
+        initialize-schema: false            # schema managed by init-rag-pgvector.sql
 
 logging:
   level:
     org.springframework.ai.ollama: DEBUG
-    org.springframework.ai.vectorstore.qdrant: DEBUG
+    org.springframework.ai.vectorstore.pgvector: DEBUG
