@@ -80,7 +80,7 @@ class PdfIngestionService(
         logger.info("Split into {} chunks", chunks.size)
 
         vectorStore.add(chunks)
-        logger.info("Stored {} chunks in Qdrant", chunks.size)
+        logger.info("Stored {} chunks in pgvector", chunks.size)
 
         return chunks.size
     }

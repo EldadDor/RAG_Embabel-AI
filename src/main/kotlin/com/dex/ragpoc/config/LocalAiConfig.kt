@@ -16,12 +16,17 @@ import org.springframework.context.annotation.Profile
  * Does NOT define VectorStore or EmbeddingModel beans — those are
  * auto-configured by spring-ai-ollama-spring-boot-starter and
  * spring-ai-pgvector-store-spring-boot-starter from application-local.yml.
+ *
+ * OllamaChatModel with a separate base-url is created by OllamaChatConfig.
  */
 @Configuration
 @Profile("local")
 class LocalAiConfig(
-    @Value("\${spring.ai.ollama.base-url:http://10.100.102.12:11434}")
-    private val ollamaBaseUrl: String,
+    @Value("\${OLLAMA_EMBED_BASE_URL:http://10.100.102.12:11434}")
+    private val ollamaEmbedUrl: String,
+
+    @Value("\${OLLAMA_CHAT_BASE_URL:http://localhost:11434}")
+    private val ollamaChatUrl: String,
 
     @Value("\${spring.ai.ollama.embedding.model:nomic-embed-text}")
     private val embeddingModel: String,
@@ -29,7 +34,7 @@ class LocalAiConfig(
     @Value("\${spring.ai.ollama.chat.model:llama3.2:3b}")
     private val chatModel: String,
 
-    @Value("\${spring.datasource.url:jdbc:postgresql://localhost:5432/ragdb}")
+    @Value("\${spring.datasource.url:jdbc:postgresql://10.100.102.12:5432/ragdb}")
     private val pgvectorUrl: String,
 ) {
     private val log = LoggerFactory.getLogger(LocalAiConfig::class.java)
@@ -38,11 +43,11 @@ class LocalAiConfig(
     fun logConfig() {
         log.info("======================================================")
         log.info(" PROFILE: local")
-        log.info(" Ollama   : {}  (chat: {}, embed: {})", ollamaBaseUrl, chatModel, embeddingModel)
-        log.info(" pgvector : {}", pgvectorUrl)
-        log.info(" Embed dim: 768  (nomic-embed-text)")
-        log.info(" NOTE: Pull models before first run:")
-        log.info("   ollama pull {}  &&  ollama pull {}", chatModel, embeddingModel)
+        log.info(" Ollama embed : {}  model: {}", ollamaEmbedUrl, embeddingModel)
+        log.info(" Ollama chat  : {}  model: {}", ollamaChatUrl, chatModel)
+        log.info(" pgvector     : {}", pgvectorUrl)
+        log.info(" Embed dim    : 768  (nomic-embed-text)")
+        log.info(" Pre-flight   : laptop=nomic-embed-text, desktop=chat model")
         log.info("======================================================")
     }
 }
