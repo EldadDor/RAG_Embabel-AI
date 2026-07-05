@@ -33,7 +33,9 @@ class OllamaChatConfig(
     @Bean
     fun ollamaChatModel(): OllamaChatModel {
         log.info("[Profile=local] OllamaChatModel → {} using model '{}'", chatBaseUrl, chatModel)
-        val api = OllamaApi(chatBaseUrl)
+        val api = OllamaApi.builder()
+            .baseUrl(chatBaseUrl)
+            .build()
         val options = OllamaOptions.builder()
             .model(chatModel)
             .temperature(0.1)
