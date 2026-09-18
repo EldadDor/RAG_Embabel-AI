@@ -37,7 +37,9 @@ class RagController(
      * TODO (Task 5.2): uncomment toolishRag injection and .tools(toolishRag) call.
      */
     @PostMapping("/query")
-    fun query(@RequestBody req: RagQueryRequest): ResponseEntity<RagQueryResponse> {
+    fun query(
+        @RequestBody req: RagQueryRequest,
+    ): ResponseEntity<RagQueryResponse> {
         // Placeholder until Task 5.2 gate: falls back to pipeline for now
         return queryPipeline(req)
     }
@@ -47,16 +49,24 @@ class RagController(
      * Done-when gate (Task 4.1): HTTP 200, non-empty answer, retrievedChunks > 0.
      */
     @PostMapping("/query/pipeline")
-    fun queryPipeline(@RequestBody req: RagQueryRequest): ResponseEntity<RagQueryResponse> {
+    fun queryPipeline(
+        @RequestBody req: RagQueryRequest,
+    ): ResponseEntity<RagQueryResponse> {
         val start = System.currentTimeMillis()
 
         // STOP CONDITION: verify SearchRequest.query(...).withTopK(...) exists in resolved Spring AI
-        val docs = vectorStore.similaritySearch(
-            SearchRequest.builder().query(req.question).topK(5).build()
-        ) ?: emptyList()
+        val docs =
+            vectorStore.similaritySearch(
+                SearchRequest
+                    .builder()
+                    .query(req.question)
+                    .topK(5)
+                    .build(),
+            ) ?: emptyList()
 
         val context = docs.joinToString("\n\n") { it.text ?: "" }
-        val prompt = """
+        val prompt =
+            """
             You are a helpful assistant. Use ONLY the provided context to answer.
             If the answer is not in the context, say "I don't know."
 
@@ -64,9 +74,16 @@ class RagController(
             $context
 
             Question: ${req.question}
-        """.trimIndent()
+            """.trimIndent()
 
-        val answer = chatClient.prompt().user(prompt).call().content()
+        logger.info("Adding a simple log to test changes")
+        logger.info("Adding Another change, just to check embedding index pickup")
+        val answer =
+            chatClient
+                .prompt()
+                .user(prompt)
+                .call()
+                .content()
         val durationMs = System.currentTimeMillis() - start
 
         logger.info("Pipeline query completed: chunks={}, duration={}ms", docs.size, durationMs)
@@ -76,7 +93,7 @@ class RagController(
                 answer = answer,
                 retrievedChunks = docs.size,
                 durationMs = durationMs,
-            )
+            ),
         )
     }
 }

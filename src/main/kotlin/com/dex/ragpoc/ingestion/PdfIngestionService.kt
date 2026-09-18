@@ -55,27 +55,32 @@ class PdfIngestionService(
         val resource = resolveResource(resourcePath)
         logger.info("Resolved PDF resource: {}", resource.description)
 
-        val config = PdfDocumentReaderConfig.builder()
-            .withPageTopMargin(0)
-            .withPageExtractedTextFormatter(
-                ExtractedTextFormatter.builder()
-                    .withNumberOfTopTextLinesToDelete(0)
-                    .build()
-            )
-            .withPagesPerDocument(1) // mirrors split_pages=True
-            .build()
+        val config =
+            PdfDocumentReaderConfig
+                .builder()
+                .withPageTopMargin(0)
+                .withPageExtractedTextFormatter(
+                    ExtractedTextFormatter
+                        .builder()
+                        .withNumberOfTopTextLinesToDelete(0)
+                        .build(),
+                ).withPagesPerDocument(1) // mirrors split_pages=True
+                .build()
 
         val reader = PagePdfDocumentReader(resource, config)
         val rawDocuments: List<Document> = reader.get()
         logger.info("Read {} raw pages from PDF", rawDocuments.size)
 
-        val splitter = TokenTextSplitter(
-            /* chunkSize         */ 512,
-            /* chunkOverlap      */ 80,
-            /* minChunkSizeChars */ 5,
-            /* maxNumChunks      */ 10000,
-            /* keepSeparator     */ true,
-        )
+        val splitter =
+            TokenTextSplitter
+                .builder()
+                .withChunkSize(512)
+                .withMinChunkSizeChars(5)
+                .withMinChunkLengthToEmbed(5)
+                .withMaxNumChunks(10_000)
+                .withKeepSeparator(true)
+                .build()
+
         val chunks: List<Document> = splitter.apply(rawDocuments)
         logger.info("Split into {} chunks", chunks.size)
 
