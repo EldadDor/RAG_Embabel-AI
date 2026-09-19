@@ -7,3 +7,4 @@ qdrant_storage/
 *.log
 .idea/
 *.iml
+config.toml
