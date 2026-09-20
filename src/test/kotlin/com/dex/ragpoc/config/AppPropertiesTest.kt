@@ -12,9 +12,13 @@ class AppPropertiesTest {
         val source =
             MapConfigurationPropertySource(
                 mapOf(
+                    "app.database.vector-store" to "postgres",
                     "app.database.schema" to "rag",
-                    "app.database.chunk-table" to "document_chunks",
-                    "app.database.vector-dimension" to "768",
+                    "app.database.chunk-table" to "document_chunks_bge_m3",
+                    "app.database.vector-dimension" to "1024",
+                    "app.rag.model-profile" to "bge-m3",
+                    "app.chat.model" to "dictalm2.0-instruct",
+                    "app.embedding.model" to "bge-m3:latest",
                     "app.rag.chunk-size" to "800",
                     "app.rag.chunk-overlap" to "120",
                     "app.assets.storage-root" to ".rag-assets",
@@ -25,8 +29,12 @@ class AppPropertiesTest {
         val properties = Binder(source).bind("app", AppProperties::class.java).get()
 
         assertEquals("rag", properties.database.schema)
-        assertEquals("document_chunks", properties.database.chunkTable)
-        assertEquals(768, properties.database.vectorDimension)
+        assertEquals("postgres", properties.database.vectorStore)
+        assertEquals("document_chunks_bge_m3", properties.database.chunkTable)
+        assertEquals(1024, properties.database.vectorDimension)
+        assertEquals("bge-m3", properties.rag.modelProfile)
+        assertEquals("dictalm2.0-instruct", properties.chat.model)
+        assertEquals("bge-m3:latest", properties.embedding.model)
         assertEquals(800, properties.rag.chunkSize)
         assertEquals(120, properties.rag.chunkOverlap)
         assertEquals(".rag-assets", properties.assets.storageRoot.toString())

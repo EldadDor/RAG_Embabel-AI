@@ -18,7 +18,7 @@ spring:
 
 server:
   address: ${API_HOST:0.0.0.0}
-  port: ${API_PORT:8080}
+  port: ${API_PORT:8000}
 
 management:
   metrics:
@@ -72,9 +72,10 @@ app:
     identity-name-header: ${CHAT_IDENTITY_NAME_HEADER:X-Forwarded-Name}
     identity-email-header: ${CHAT_IDENTITY_EMAIL_HEADER:X-Forwarded-Email}
   database:
+    vector-store: ${VECTOR_STORE:postgres}
     schema: ${PG_SCHEMA:rag}
-    chunk-table: ${PG_TABLE:document_chunks}
-    vector-dimension: ${PG_VECTOR_DIM:768}
+    chunk-table: ${PG_TABLE:document_chunks_bge_m3}
+    vector-dimension: ${PG_VECTOR_DIM:1024}
     ssl-mode: ${PG_SSLMODE:disable}
     use-entra: ${PG_USE_ENTRA:false}
   rag:
@@ -83,7 +84,7 @@ app:
     chunk-size: ${CHUNK_SIZE:800}
     chunk-overlap: ${CHUNK_OVERLAP:120}
     default-chunking-profile: ${DEFAULT_CHUNKING_PROFILE:default}
-    model-profile: ${MODEL_PROFILE:default}
+    model-profile: ${MODEL_PROFILE:bge-m3}
     min-retrieval-score: ${MIN_RETRIEVAL_SCORE:0.35}
     hybrid-search-enabled: ${HYBRID_SEARCH_ENABLED:true}
     retrieval-candidate-k: ${RETRIEVAL_CANDIDATE_K:20}
@@ -109,5 +110,5 @@ app:
 
 logging:
   level:
-    com.dex.ragpoc: ${LOG_LEVEL:INFO}
+    com.dex.ragpoc: ${LOG_LEVEL:DEBUG}
     org.springframework.ai: INFO

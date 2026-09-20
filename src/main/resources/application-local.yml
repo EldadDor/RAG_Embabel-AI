@@ -6,24 +6,25 @@ spring:
     ollama:
       base-url: ${EMBEDDING_BASE_URL:http://10.100.102.12:11434}
       embedding:
-        model: ${EMBEDDING_MODEL:nomic-embed-text}
+        model: ${EMBEDDING_MODEL:bge-m3:latest}
     openai:
-      base-url: ${CHAT_BASE_URL:http://localhost:11434/v1}
+      base-url: ${CHAT_BASE_URL:http://127.0.0.1:1234/v1}
       api-key: ${CHAT_API_KEY:dummy}
       chat:
         options:
-          model: ${CHAT_MODEL:qwen2.5:7b-instruct-q4_K_M}
+          model: ${CHAT_MODEL:dictalm2.0-instruct}
 
 app:
   chat:
     provider: ${CHAT_PROVIDER:openai_compatible}
+    model: ${CHAT_MODEL:dictalm2.0-instruct}
     timeout-seconds: ${CHAT_TIMEOUT_SECONDS:240}
     max-tokens: ${CHAT_MAX_TOKENS:400}
     think: ${CHAT_THINK:false}
   embedding:
     provider: ${EMBEDDING_PROVIDER:ollama}
     base-url: ${EMBEDDING_BASE_URL:http://10.100.102.12:11434}
-    model: ${EMBEDDING_MODEL:nomic-embed-text}
+    model: ${EMBEDDING_MODEL:bge-m3:latest}
     timeout-seconds: ${EMBEDDING_TIMEOUT_SECONDS:120}
     concurrency: ${EMBEDDING_CONCURRENCY:8}
     cache-enabled: ${EMBEDDING_CACHE_ENABLED:true}

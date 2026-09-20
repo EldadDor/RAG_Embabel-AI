@@ -17,6 +17,7 @@ spring:
 app:
   chat:
     provider: ${CHAT_PROVIDER:azure_openai}
+    model: ${CHAT_MODEL}
     timeout-seconds: ${CHAT_TIMEOUT_SECONDS:240}
     max-tokens: ${CHAT_MAX_TOKENS:400}
     think: ${CHAT_THINK:false}

@@ -27,9 +27,10 @@ data class AppProperties(
     )
 
     data class Database(
+        val vectorStore: String = "postgres",
         val schema: String = "rag",
-        val chunkTable: String = "document_chunks",
-        val vectorDimension: Int = 768,
+        val chunkTable: String = "document_chunks_bge_m3",
+        val vectorDimension: Int = 1024,
         val sslMode: String = "disable",
         val useEntra: Boolean = false,
     )
@@ -40,7 +41,7 @@ data class AppProperties(
         val chunkSize: Int = 800,
         val chunkOverlap: Int = 120,
         val defaultChunkingProfile: String = "default",
-        val modelProfile: String = "default",
+        val modelProfile: String = "bge-m3",
         val minRetrievalScore: Double = 0.35,
         val hybridSearchEnabled: Boolean = true,
         val retrievalCandidateK: Int = 20,
@@ -75,6 +76,7 @@ data class AppProperties(
 
     data class Chat(
         val provider: String = "openai_compatible",
+        val model: String = "dictalm2.0-instruct",
         val timeoutSeconds: Long = 240,
         val maxTokens: Int = 400,
         val think: Boolean = false,
@@ -82,8 +84,8 @@ data class AppProperties(
 
     data class Embedding(
         val provider: String = "ollama",
-        val baseUrl: String = "http://localhost:11434",
-        val model: String = "nomic-embed-text",
+        val baseUrl: String = "http://10.100.102.12:11434",
+        val model: String = "bge-m3:latest",
         val timeoutSeconds: Long = 120,
         val concurrency: Int = 8,
         val cacheEnabled: Boolean = true,
