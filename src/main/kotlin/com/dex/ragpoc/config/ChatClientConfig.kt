@@ -24,7 +24,7 @@ class ChatClientConfig {
     @Bean
     @Profile("local")
     fun chatClientLocal(builder: ChatClient.Builder): ChatClient {
-        log.info("[Profile=local] Building ChatClient → Ollama")
+        log.info("[Profile=local] Building ChatClient → OpenAI-compatible endpoint")
         return builder
             .defaultSystem(
                 """

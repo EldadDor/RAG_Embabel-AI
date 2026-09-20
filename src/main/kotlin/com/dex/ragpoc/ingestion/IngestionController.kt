@@ -1,5 +1,6 @@
 package com.dex.ragpoc.ingestion
 
+import org.springframework.context.annotation.Profile
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -15,19 +16,22 @@ import org.springframework.web.bind.annotation.RestController
  *   AND collection visible at http://localhost:6333/dashboard
  */
 @RestController
+@Profile("legacy-poc & vector-store-poc")
 @RequestMapping("/api/ingest")
 class IngestionController(
     private val pdfIngestionService: PdfIngestionService,
 ) {
     @PostMapping
-    fun ingest(@RequestParam path: String): ResponseEntity<Map<String, Any>> {
+    fun ingest(
+        @RequestParam path: String,
+    ): ResponseEntity<Map<String, Any>> {
         val chunkCount = pdfIngestionService.ingestPdf(path)
         return ResponseEntity.ok(
             mapOf(
                 "chunks" to chunkCount,
                 "path" to path,
                 "status" to "ingested",
-            )
+            ),
         )
     }
 }

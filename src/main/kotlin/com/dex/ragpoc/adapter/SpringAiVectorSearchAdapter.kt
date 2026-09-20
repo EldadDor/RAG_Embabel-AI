@@ -38,7 +38,7 @@ import org.springframework.stereotype.Component
  *       Implement: VectorSearch (and optionally TextSearch for Task 6.1 hybrid search)
  */
 @Component
-@Profile("legacy-poc")
+@Profile("legacy-poc & vector-store-poc")
 class SpringAiVectorSearchAdapter(
     private val vectorStore: VectorStore,
     private val embeddingModel: EmbeddingModel,

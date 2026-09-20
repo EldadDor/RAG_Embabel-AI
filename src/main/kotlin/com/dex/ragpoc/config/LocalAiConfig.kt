@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Profile
  * OllamaChatModel with a separate base-url is created by OllamaChatConfig.
  */
 @Configuration
-@Profile("legacy-poc")
+@Profile("legacy-poc & legacy-ollama-chat & local")
 class LocalAiConfig(
     @Value("\${OLLAMA_EMBED_BASE_URL:http://10.100.102.12:11434}")
     private val ollamaEmbedUrl: String,

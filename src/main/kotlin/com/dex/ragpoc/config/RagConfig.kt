@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Profile
  * TODO (Task 5.2): Uncomment and complete after Task 5.1 gate passes.
  */
 @Configuration
-@Profile("legacy-poc")
+@Profile("legacy-poc & vector-store-poc")
 class RagConfig(
     private val vectorStore: VectorStore,
     private val embeddingModel: EmbeddingModel,

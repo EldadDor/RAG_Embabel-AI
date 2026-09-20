@@ -36,7 +36,7 @@ management:
     metrics:
       export:
         enabled: ${OTEL_METRICS_ENABLED:true}
-        url: ${OTEL_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
+        url: ${OTEL_METRICS_ENDPOINT:http://10.100.102.12:4318/v1/metrics}
   endpoints:
     web:
       exposure:
@@ -59,7 +59,7 @@ management:
     tracing:
       export:
         otlp:
-          endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+          endpoint: ${OTEL_TRACES_ENDPOINT:http://10.100.102.12:4318/v1/traces}
 
 app:
   environment: ${APP_ENV:local}
@@ -105,8 +105,8 @@ app:
   telemetry:
     service-name: ${OTEL_SERVICE_NAME:${spring.application.name}}
     metrics-export-enabled: ${OTEL_METRICS_ENABLED:true}
-    metrics-endpoint: ${OTEL_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
-    traces-endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+    metrics-endpoint: ${OTEL_METRICS_ENDPOINT:http://10.100.102.12:4318/v1/metrics}
+    traces-endpoint: ${OTEL_TRACES_ENDPOINT:http://10.100.102.12:4318/v1/traces}
 
 logging:
   level:

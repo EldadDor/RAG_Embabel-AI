@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController
  * - Task 5.2: If ToolishRag injection fails, return to Task 5.1 gate.
  */
 @RestController
-@Profile("legacy-poc")
+@Profile("legacy-poc & vector-store-poc")
 @RequestMapping("/api/rag")
 class RagController(
     private val chatClient: ChatClient,

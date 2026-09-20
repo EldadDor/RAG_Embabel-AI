@@ -3,6 +3,9 @@ spring:
     activate:
       on-profile: local
   ai:
+    model:
+      chat: openai
+      embedding: ollama
     ollama:
       base-url: ${EMBEDDING_BASE_URL:http://10.100.102.12:11434}
       embedding:

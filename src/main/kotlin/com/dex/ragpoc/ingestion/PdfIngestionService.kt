@@ -29,7 +29,7 @@ import java.io.File
  *   maxNumChunks, keepSeparator) — report and stop.
  */
 @Service
-@Profile("legacy-poc")
+@Profile("legacy-poc & vector-store-poc")
 class PdfIngestionService(
     private val vectorStore: VectorStore,
 ) {

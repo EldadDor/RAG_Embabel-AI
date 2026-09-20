@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Profile
  * Set them in your .env or environment before running with profile=work.
  */
 @Configuration
-@Profile("legacy-poc")
+@Profile("legacy-poc & work")
 class WorkAiConfig(
     @Value("\${spring.ai.azure.openai.endpoint}")
     private val azureEndpoint: String,

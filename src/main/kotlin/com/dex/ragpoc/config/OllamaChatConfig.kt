@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Profile
  * so defining this bean prevents a duplicate from being created.
  */
 @Configuration
-@Profile("legacy-poc")
+@Profile("legacy-poc & legacy-ollama-chat & local")
 class OllamaChatConfig(
     @Value("\${OLLAMA_CHAT_BASE_URL:http://localhost:11434}")
     private val chatBaseUrl: String,
