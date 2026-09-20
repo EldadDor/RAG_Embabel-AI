@@ -1,12 +1,14 @@
 package com.dex.ragpoc.config
 
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 
 /**
- * VectorStore configuration.
- * Spring AI auto-configures the QdrantVectorStore bean via spring-ai-qdrant-store-spring-boot-starter
- * and the properties in application.yml.
- * Additional collection/schema settings go here if needed.
+ * Reserved for a future explicit vector-store adapter.
+ *
+ * The default parity service uses JDBC against Python-managed PostgreSQL tables and does not
+ * auto-configure a Spring AI vector-store implementation.
  */
 @Configuration
+@Profile("legacy-poc")
 class VectorStoreConfig

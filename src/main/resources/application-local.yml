@@ -1,65 +1,29 @@
-# ============================================================
-# LOCAL profile — Ollama split topology + pgvector on Laptop
-#
-# Topology:
-#   Laptop  (10.100.102.12): Ollama embedding → http://10.100.102.12:11434
-#                            PostgreSQL pgvector → 10.100.102.12:5432
-#   Desktop (runs the app) : Ollama chat       → http://localhost:11434
-#
-# Start app (from Desktop):
-#   SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
-#
-# Pre-flight checklist:
-#   On laptop : ollama pull nomic-embed-text
-#               docker-compose -f docker/docker-compose-pgvector.yml up -d
-#   On desktop: ollama pull llama3.2:3b   (or whichever OLLAMA_CHAT_MODEL)
-#               copy .env.desktop.example → .env and set values
-#   Verify    : curl http://10.100.102.12:11434   <- laptop Ollama OK
-#               curl http://localhost:11434        <- desktop Ollama OK
-# ============================================================
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.ai.model.chat.memory.repository.jdbc.autoconfigure.JdbcChatMemoryRepositoryAutoConfiguration
-
-  datasource:
-    url: ${PGVECTOR_URL:jdbc:postgresql://10.100.102.12:5432/ragdb}
-    username: ${PGVECTOR_USER:rag_app}
-    password: ${PGVECTOR_PASSWORD:rag_app_password}
-    driver-class-name: org.postgresql.Driver
-
+  config:
+    activate:
+      on-profile: local
   ai:
     ollama:
-      # base-url drives the AUTO-CONFIGURED OllamaEmbeddingModel (laptop)
-      base-url: ${OLLAMA_EMBED_BASE_URL:http://10.100.102.12:11434}
-
-      # -- Embedding model (768-dim, laptop) -------------------------
+      base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
       embedding:
-        model: ${OLLAMA_EMBED_MODEL:nomic-embed-text}
-        options:
-          num-ctx: 512
-
-      # -- Chat model (desktop localhost) ----------------------------
-      # OllamaChatConfig creates a SEPARATE OllamaChatModel bean
-      # pointing to OLLAMA_CHAT_BASE_URL (localhost by default).
+        model: ${EMBEDDING_MODEL:nomic-embed-text}
+    openai:
+      base-url: ${CHAT_BASE_URL:http://localhost:8080/v1}
+      api-key: ${CHAT_API_KEY:dummy}
       chat:
-        model: ${OLLAMA_CHAT_MODEL:llama3.2:3b}
         options:
-          temperature: 0.1
-          num-ctx: 2048
-          num-predict: 512
+          model: ${CHAT_MODEL:qwen2.5:7b-instruct-q4_K_M}
 
-    # -- Vector store: pgvector (laptop Docker) ----------------------
-    vectorstore:
-      pgvector:
-        schema-name: rag
-        table-name: document_chunks
-        dimensions: 768                     # nomic-embed-text = 768 dims
-        distance-type: COSINE_DISTANCE
-        initialize-schema: false            # schema managed by init-rag-pgvector.sql
-
-logging:
-  level:
-    org.springframework.ai.ollama: DEBUG
-    org.springframework.ai.vectorstore.pgvector: DEBUG
+app:
+  chat:
+    provider: ${CHAT_PROVIDER:openai_compatible}
+    timeout-seconds: ${CHAT_TIMEOUT_SECONDS:240}
+    max-tokens: ${CHAT_MAX_TOKENS:400}
+    think: ${CHAT_THINK:false}
+  embedding:
+    provider: ${EMBEDDING_PROVIDER:ollama}
+    base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
+    model: ${EMBEDDING_MODEL:nomic-embed-text}
+    timeout-seconds: ${EMBEDDING_TIMEOUT_SECONDS:120}
+    concurrency: ${EMBEDDING_CONCURRENCY:8}
+    cache-enabled: ${EMBEDDING_CACHE_ENABLED:true}

@@ -21,20 +21,16 @@ import org.springframework.context.annotation.Profile
  * Set them in your .env or environment before running with profile=work.
  */
 @Configuration
-@Profile("work")
+@Profile("legacy-poc")
 class WorkAiConfig(
     @Value("\${spring.ai.azure.openai.endpoint}")
     private val azureEndpoint: String,
-
     @Value("\${spring.ai.azure.openai.embedding.deployment-name:text-embedding-ada-002}")
     private val embedDeployment: String,
-
     @Value("\${spring.ai.azure.openai.chat.deployment-name:gpt-4o}")
     private val chatDeployment: String,
-
     @Value("\${spring.datasource.url}")
     private val pgUrl: String,
-
     @Value("\${spring.datasource.username}")
     private val pgUser: String,
 ) {

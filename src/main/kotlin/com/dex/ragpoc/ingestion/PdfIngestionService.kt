@@ -7,6 +7,7 @@ import org.springframework.ai.reader.pdf.PagePdfDocumentReader
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.ai.vectorstore.VectorStore
+import org.springframework.context.annotation.Profile
 import org.springframework.core.io.ClassPathResource
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
@@ -28,6 +29,7 @@ import java.io.File
  *   maxNumChunks, keepSeparator) — report and stop.
  */
 @Service
+@Profile("legacy-poc")
 class PdfIngestionService(
     private val vectorStore: VectorStore,
 ) {

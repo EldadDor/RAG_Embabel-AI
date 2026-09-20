@@ -3,6 +3,7 @@ package com.dex.ragpoc.adapter
 import org.slf4j.LoggerFactory
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.vectorstore.VectorStore
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
 /**
@@ -37,6 +38,7 @@ import org.springframework.stereotype.Component
  *       Implement: VectorSearch (and optionally TextSearch for Task 6.1 hybrid search)
  */
 @Component
+@Profile("legacy-poc")
 class SpringAiVectorSearchAdapter(
     private val vectorStore: VectorStore,
     private val embeddingModel: EmbeddingModel,

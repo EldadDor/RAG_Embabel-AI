@@ -4,7 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-03 | Local telemetry platform and application foundation | RDP-02 | OTel Collector, Prometheus, Grafana, Actuator, and local trace/metric export work without Langfuse. |
 | RDP-04 | Shared schema validator and domain model | RDP-02 | Kotlin validates the Python-managed schema without DDL. |
 | RDP-05 | JDBC persistence interoperability | RDP-04 | Controlled Python/Kotlin cross-language repository fixtures pass. |
 | RDP-06 | Document parsing foundation | RDP-02 | Text, Markdown, HTML, PDF, registry, directory scan, and fixture behavior match Python. |

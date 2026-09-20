@@ -1,28 +1,77 @@
-# ============================================================
-# Base application config — profile-agnostic
-# Active profile: local (Ollama + Qdrant) | work (Azure OpenAI + pgvector)
-# Switch via: SPRING_PROFILES_ACTIVE=work  or  -Dspring-boot.run.profiles=work
-# ============================================================
 spring:
   application:
-    name: rag-embabel-poc
+    name: rag-embabel-ai
   profiles:
-    active: local   # default; override with env var SPRING_PROFILES_ACTIVE=work
+    default: local
+  datasource:
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5432}/${PG_DATABASE:ragdb}
+    username: ${PG_USER:rag_app}
+    password: ${PG_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${PG_POOL_MAX_SIZE:10}
+      minimum-idle: ${PG_POOL_MIN_IDLE:2}
+      connection-timeout: ${PG_CONNECTION_TIMEOUT_MS:30000}
+  ai:
+    model:
+      embedding: ollama
 
 server:
-  port: ${SERVER_PORT:8080}
+  address: ${API_HOST:0.0.0.0}
+  port: ${API_PORT:8080}
 
-# ── RAG tuning (profile-independent) ────────────────────────
-rag:
-  chunk-size: ${RAG_CHUNK_SIZE:512}
-  chunk-overlap: ${RAG_CHUNK_OVERLAP:80}
-  top-k: ${RAG_TOP_K:5}
-  similarity-threshold: ${RAG_SIMILARITY_THRESHOLD:0.75}
-  collection-name: ${RAG_COLLECTION:rag-poc-chunks}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
-# ── Logging ─────────────────────────────────────────────────
+app:
+  environment: ${APP_ENV:local}
+  auth:
+    mode: ${AUTH_MODE:local}
+    local-subject: ${LOCAL_SUBJECT:local-dev}
+    local-display-name: ${LOCAL_DISPLAY_NAME:Local Developer}
+    local-email: ${LOCAL_EMAIL:dev@localhost}
+    identity-header: ${CHAT_IDENTITY_HEADER:X-Forwarded-User}
+    identity-name-header: ${CHAT_IDENTITY_NAME_HEADER:X-Forwarded-Name}
+    identity-email-header: ${CHAT_IDENTITY_EMAIL_HEADER:X-Forwarded-Email}
+  database:
+    schema: ${PG_SCHEMA:rag}
+    chunk-table: ${PG_TABLE:document_chunks}
+    vector-dimension: ${PG_VECTOR_DIM:768}
+    ssl-mode: ${PG_SSLMODE:disable}
+    use-entra: ${PG_USE_ENTRA:false}
+  rag:
+    default-workspace-id: ${DEFAULT_WORKSPACE_ID:local}
+    top-k: ${TOP_K:5}
+    chunk-size: ${CHUNK_SIZE:800}
+    chunk-overlap: ${CHUNK_OVERLAP:120}
+    default-chunking-profile: ${DEFAULT_CHUNKING_PROFILE:default}
+    model-profile: ${MODEL_PROFILE:default}
+    min-retrieval-score: ${MIN_RETRIEVAL_SCORE:0.35}
+    hybrid-search-enabled: ${HYBRID_SEARCH_ENABLED:true}
+    retrieval-candidate-k: ${RETRIEVAL_CANDIDATE_K:20}
+    rrf-k: ${RRF_K:60}
+    rerank-enabled: ${RERANK_ENABLED:false}
+    rerank-candidate-k: ${RERANK_CANDIDATE_K:20}
+  assets:
+    storage-root: ${ASSET_STORAGE_ROOT:.rag-assets}
+    max-image-bytes: ${ASSET_MAX_IMAGE_BYTES:15728640}
+    max-images-per-document: ${ASSET_MAX_IMAGES_PER_DOCUMENT:100}
+    max-total-bytes-per-document: ${ASSET_MAX_TOTAL_BYTES_PER_DOCUMENT:104857600}
+  memory:
+    max-turns: ${MEMORY_MAX_TURNS:10}
+    retention-days: ${MEMORY_RETENTION_DAYS:90}
+    summary-after-turns: ${MEMORY_SUMMARY_AFTER_TURNS:8}
+  observability:
+    langfuse-enabled: ${LANGFUSE_ENABLED:false}
+
 logging:
   level:
-    com.dex.ragpoc: DEBUG
+    com.dex.ragpoc: ${LOG_LEVEL:INFO}
     org.springframework.ai: INFO
-    org.springframework.ai.vectorstore: DEBUG

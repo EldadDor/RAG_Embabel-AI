@@ -20,20 +20,16 @@ import org.springframework.context.annotation.Profile
  * OllamaChatModel with a separate base-url is created by OllamaChatConfig.
  */
 @Configuration
-@Profile("local")
+@Profile("legacy-poc")
 class LocalAiConfig(
     @Value("\${OLLAMA_EMBED_BASE_URL:http://10.100.102.12:11434}")
     private val ollamaEmbedUrl: String,
-
     @Value("\${OLLAMA_CHAT_BASE_URL:http://localhost:11434}")
     private val ollamaChatUrl: String,
-
     @Value("\${spring.ai.ollama.embedding.model:nomic-embed-text}")
     private val embeddingModel: String,
-
     @Value("\${spring.ai.ollama.chat.model:llama3.2:3b}")
     private val chatModel: String,
-
     @Value("\${spring.datasource.url:jdbc:postgresql://10.100.102.12:5432/ragdb}")
     private val pgvectorUrl: String,
 ) {

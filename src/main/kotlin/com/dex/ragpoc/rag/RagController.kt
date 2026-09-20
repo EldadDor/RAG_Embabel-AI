@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
+import org.springframework.context.annotation.Profile
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController
  * - Task 5.2: If ToolishRag injection fails, return to Task 5.1 gate.
  */
 @RestController
+@Profile("legacy-poc")
 @RequestMapping("/api/rag")
 class RagController(
     private val chatClient: ChatClient,

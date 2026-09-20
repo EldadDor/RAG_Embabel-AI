@@ -17,8 +17,8 @@ import org.springframework.context.annotation.Profile
  *           work  → Azure OpenAI (gpt-4o or configured deployment)
  */
 @Configuration
+@Profile("legacy-poc")
 class ChatClientConfig {
-
     private val log = LoggerFactory.getLogger(ChatClientConfig::class.java)
 
     @Bean
@@ -32,9 +32,8 @@ class ChatClientConfig {
                 Answer ONLY from the provided context.
                 If the answer is not in the context, say exactly: "I don't know."
                 Keep answers concise and accurate.
-                """.trimIndent()
-            )
-            .build()
+                """.trimIndent(),
+            ).build()
     }
 
     @Bean
@@ -48,8 +47,7 @@ class ChatClientConfig {
                 Answer ONLY from the provided context.
                 Cite the source document and page number when possible.
                 If the answer is not in the context, say exactly: "I don't know."
-                """.trimIndent()
-            )
-            .build()
+                """.trimIndent(),
+            ).build()
     }
 }

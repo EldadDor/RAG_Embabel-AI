@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 
 /**
  * RAG wiring configuration.
@@ -26,6 +27,7 @@ import org.springframework.context.annotation.Configuration
  * TODO (Task 5.2): Uncomment and complete after Task 5.1 gate passes.
  */
 @Configuration
+@Profile("legacy-poc")
 class RagConfig(
     private val vectorStore: VectorStore,
     private val embeddingModel: EmbeddingModel,
