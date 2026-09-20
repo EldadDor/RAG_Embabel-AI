@@ -4,11 +4,11 @@ spring:
       on-profile: local
   ai:
     ollama:
-      base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
+      base-url: ${EMBEDDING_BASE_URL:http://10.100.102.12:11434}
       embedding:
         model: ${EMBEDDING_MODEL:nomic-embed-text}
     openai:
-      base-url: ${CHAT_BASE_URL:http://localhost:8080/v1}
+      base-url: ${CHAT_BASE_URL:http://localhost:11434/v1}
       api-key: ${CHAT_API_KEY:dummy}
       chat:
         options:
@@ -22,7 +22,7 @@ app:
     think: ${CHAT_THINK:false}
   embedding:
     provider: ${EMBEDDING_PROVIDER:ollama}
-    base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
+    base-url: ${EMBEDDING_BASE_URL:http://10.100.102.12:11434}
     model: ${EMBEDDING_MODEL:nomic-embed-text}
     timeout-seconds: ${EMBEDDING_TIMEOUT_SECONDS:120}
     concurrency: ${EMBEDDING_CONCURRENCY:8}
