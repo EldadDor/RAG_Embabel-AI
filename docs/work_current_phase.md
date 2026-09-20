@@ -1,6 +1,6 @@
-# Current phase: planning and contract intake
+# Current phase: Spring Boot configuration alignment
 
-**Last reviewed:** 2026-09-19
+**Last reviewed:** 2026-09-20
 
 | ID | Task | Status | Scope and approval dependency | Evidence |
 | --- | --- | --- | --- | --- |
@@ -9,5 +9,7 @@
 | DOC-03 | Reconcile Kotlin plan with Python source | Completed | Inspected `EldadDor/RAG-dev-plane` at `92a594e8e3bec694b1a893563f63d8a220605dcd`, removed excluded scope, and revised the Kotlin plans for approval. | Reviewed Python configuration, API schemas/routers, identity/dependencies, pgvector store, services, migrations, tests, evaluation data, and `.env.example`; verified the Kotlin workspace has no `.env`. Updated `docs/PLAN.md`, `docs/architecture.md`, and `docs/next_phase.md`. `git diff --check` found only Markdown line-break whitespace, then corrected. No build, tests, database connection, provider call, or configuration-value transfer run. Commit: none. |
 | DOC-04 | Expand parity breakdown and local observability plan | Completed | Replaced opaque task IDs, made all Python loaders/chunkers/assets early explicit work, and specified local OpenTelemetry, Prometheus, Grafana, and collector coverage independent of Langfuse. | Reviewed Python loader registry/implementations and observability modules. Rewrote `docs/PLAN.md`; updated `docs/next_phase.md` and `docs/architecture.md`. No build, tests, database connection, provider call, Docker service, or `.env` value transfer run. Commit: none. |
 | DOC-05 | Refine parity evidence and Spring configuration plan | Completed | Prioritized API contract/golden evaluation evidence and translated Python configuration intent into standard Spring Boot YAML/profiles. | Verified `evaluation/golden-cases.jsonl` and `evaluation/golden-cases-heb.jsonl` are present. Updated `docs/PLAN.md`, `docs/next_phase.md`, and `docs/architecture.md`. No build, tests, database connection, provider call, Docker service, or configuration-value transfer run. Commit: none. |
+| RDP-01 | Freeze API and evaluation evidence | Completed | Established Kotlin API contract fixtures and golden-case evaluation coverage from RAG-dev-plane; selected high-risk Python fixtures instead of porting every Python test. | Created `docs/api_evaluation_contract.md`. Verified 19 English and 13 Hebrew golden cases. Identified the active Python API modules and documented the source no-context-answer fixture discrepancy. `mvn spotless:apply` was not run: Maven first targeted inaccessible `C:\.m2`; RTK then misparsed the project-local repository argument. No build, tests, database connection, provider call, Docker service, or configuration-value transfer run. Commit: `cfa8619`. |
+| RDP-02 | Build and Spring Boot configuration alignment | In progress | Align standard Spring Boot YAML/profile configuration with the active Python settings, remove persistence auto-initialization, and prepare typed configuration. No database schema change. | Pending. |
 
 The implementation backlog is in [next_phase.md](next_phase.md). The detailed sequence and gates are in [PLAN.md](PLAN.md).

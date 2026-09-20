@@ -4,8 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-01 | Freeze API and evaluation evidence | Approval of [PLAN.md](PLAN.md) | API contracts, copied golden cases, and selected high-risk Python fixtures are mapped to Kotlin tests. |
-| RDP-02 | Build and Spring Boot configuration alignment | RDP-01 | Standard Spring Boot YAML/profiles reflect active Python configuration; typed binding and dependency cleanup are verified. |
 | RDP-03 | Local telemetry platform and application foundation | RDP-02 | OTel Collector, Prometheus, Grafana, Actuator, and local trace/metric export work without Langfuse. |
 | RDP-04 | Shared schema validator and domain model | RDP-02 | Kotlin validates the Python-managed schema without DDL. |
 | RDP-05 | JDBC persistence interoperability | RDP-04 | Controlled Python/Kotlin cross-language repository fixtures pass. |
