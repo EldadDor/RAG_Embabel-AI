@@ -1,108 +1,187 @@
-# Kotlin parity plan for RAG-dev-plane
+# RAG-dev-plane Kotlin parity plan
 
 **Status:** revised for approval
 
 **Last reviewed:** 2026-09-19
+
 **Authoritative source:** `EldadDor/RAG-dev-plane` at `92a594e8e3bec694b1a893563f63d8a220605dcd`.
 
-## Scope
+## Task naming
 
-Port the Python service's backend behavior into Kotlin/Spring Boot while both services can operate on the same already-provisioned PostgreSQL/pgvector database. The Kotlin implementation must preserve the Python service's public API, security model, ingestion semantics, retrieval behavior, assets, sessions, model profiles, evaluation data, and configuration semantics.
+`SVC` meant “service.” It is replaced by `RDP`, meaning **RAG-dev-plane parity**. Every `RDP` task delivers one verifiable part of the Python backend in Kotlin.
 
-The database schema remains owned by RAG-dev-plane. Kotlin must never create, alter, baseline, migrate, resize, or seed it. It validates the existing database at startup and fails clearly if a required table, index-relevant column, model profile, or vector dimension is absent.
+## Scope and non-negotiable boundaries
 
-Embabel is outside parity scope. Keep its 1.5.2 dependency isolated until the deterministic Python behavior is reproduced and verified.
+Kotlin ports all backend behavior in RAG-dev-plane: document loading and chunking, embedded-document assets, ingestion, storage, model profiles/cache, retrieval, chat and memory, security, API behavior, streaming, evaluation, and observability.
 
-## Findings from source review
+RAG-dev-plane owns the PostgreSQL/pgvector schema. Kotlin validates and uses the existing schema; it never creates, alters, baselines, migrates, resizes, or seeds it. Spring AI is used for chat and embedding provider calls only. A custom JDBC persistence layer is required for the shared tables.
 
-| Area | Python implementation | Kotlin plan |
-| --- | --- | --- |
-| Configuration | Pydantic settings load `.env`; the committed example defines the local baseline | Kotlin `.env` uses the same variable names and active values. Spring properties map directly from those variables. |
-| Data ownership | Python validates migrations `001_baseline` through `005_model_profiles`; it does not execute them at runtime | No Flyway, schema initializer, or startup DDL in Kotlin. Use read-only schema validation. |
-| Vector storage | `rag.document_chunks` stores UUIDv5 IDs, content, JSONB metadata, vector, source, page, and chunk index; search is scoped by workspace/profile | A custom JDBC repository reproduces the Python SQL and types. Do not use Spring AI `PgVectorStore` for this shared table. |
-| Retrieval | Query embedding, minimum 0.35 semantic score, optional PostgreSQL full-text search, RRF 60, 20 candidates, optional reranking | Preserve the exact algorithm, ordering, scope filters, defaults, and debug fields. |
-| Profiles and cache | `rag.model_profiles` selects a ready profile/table; cache stores little-endian float32 bytes keyed from effective prefixed input | Resolve profiles and cache through the same tables. Validate model dimensions before every write/search. |
-| Ingestion | Hashes content; embeds before transactional replacement; supports profile isolation, asset links, and root-scoped stale-file deletion | Preserve chunk IDs, metadata keys, atomic replacement, dry-run purity, asset IDs/storage keys, and cleanup scope. |
-| Sessions and authorization | Local or gateway principal; workspace membership; durable sessions/turns/summaries; ownership masking | Use server-derived identity and the same table semantics and HTTP behavior. |
-| Providers | OpenAI-compatible or Azure chat; Ollama or Azure embeddings; PostgreSQL is default | Implement the active `.env` provider path first, retaining provider-neutral gateways for the supported alternatives. |
+Embabel is deferred until all RDP tasks pass. It must not alter the deterministic parity path.
 
-## Configuration baseline
+## Confirmed source behavior
 
-There is currently no Kotlin `.env` file. Before service work begins, create the ignored file by transferring the current values from RAG-dev-plane's local `.env`, using the Python names below. Do not use the obsolete `PGVECTOR_*`, `OLLAMA_CHAT_*`, or `RAG_*` variables as the Kotlin source of truth.
-
-| Python environment group | Kotlin binding target |
+| Area | Python behavior that Kotlin must reproduce |
 | --- | --- |
-| `APP_ENV`, `LOG_LEVEL`, `API_HOST`, `API_PORT` | application environment, logging, server |
-| `AUTH_MODE`, `LOCAL_*`, `CHAT_IDENTITY_*` | principal resolver |
-| `PG_HOST`, `PG_PORT`, `PG_DATABASE`, `PG_USER`, `PG_PASSWORD`, `PG_SSLMODE`, `PG_USE_ENTRA`, `PG_SCHEMA`, `PG_TABLE`, `PG_VECTOR_DIM` | datasource and schema validator |
-| `CHAT_PROVIDER`, `CHAT_BASE_URL`, `CHAT_API_KEY`, `CHAT_MODEL`, `CHAT_TIMEOUT_SECONDS`, `CHAT_MAX_TOKENS`, `CHAT_THINK` | chat gateway |
-| `EMBEDDING_PROVIDER`, `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_TIMEOUT_SECONDS`, `EMBEDDING_CONCURRENCY`, `MODEL_PROFILE`, `EMBEDDING_CACHE_ENABLED` | embedding gateway and profile/cache services |
-| `AZURE_OPENAI_*` | Azure provider and Entra access-token path when selected |
-| `DEFAULT_WORKSPACE_ID`, `TOP_K`, `CHUNK_*`, `DEFAULT_CHUNKING_PROFILE`, `CHUNKING_PROFILES`, `MIN_RETRIEVAL_SCORE`, `HYBRID_SEARCH_ENABLED`, `RETRIEVAL_CANDIDATE_K`, `RRF_K`, `RERANK_*` | ingestion and retrieval settings |
-| `ASSET_*`, `MEMORY_*`, `LANGFUSE_*` | assets, conversation lifecycle, observability |
+| Database | `rag.schema_migrations` holds versions `001_baseline` to `005_model_profiles`; startup validates them and all required tables. `document_chunks` uses Python UUIDv5 IDs, JSONB metadata, `vector(n)`, source path, page, and chunk index. |
+| Configuration | Pydantic loads `.env` in Python. Kotlin expresses the equivalent active configuration through standard Spring Boot `application.yml` and profile YAML. |
+| File registry | Supports `.md`, `.mdx`, `.html`, `.htm`, `.pdf`, `.docx`, `.txt`, `.py`, `.js`, `.jsx`, `.ts`, `.tsx`, `.java`, `.kt`, `.kts`, `.cs`, `.go`, `.rs`, `.sql`, `.json`, `.yaml`, `.yml`, and `.toml`; recursive scans skip `.git`, `.idea`, `.gradle`, `.venv`, `build`, `node_modules`, `out`, and `target`. |
+| PDF | Reads text page by page, preserves page break markers and page metadata, and produces stable document identity/provenance. |
+| Markdown | Preserves UTF-8 text and uses the first H1 as title when present. |
+| Word | Rejects unsafe/corrupt/encrypted packages; preserves ordered paragraphs, headings, lists, tables, page-break hints, block offsets, sections, and title. Extracts embedded image bytes and links each image through relationship ID, anchor block/ordinal, section, underlying text/caption, alt text, content hash, media type, and original name. No image recognition is included. |
+| Code | Uses structure-aware Python, Java, and Kotlin chunking; preserves language, symbols, enclosing types, line ranges, and repository metadata. Malformed Java/Kotlin falls back to generic text chunking. |
+| Retrieval | Query embedding with profile prefix; semantic score floor 0.35; optional PostgreSQL full-text retrieval; RRF 60; 20 candidates; default top 5; optional reranker. |
+| Profiles/cache | Ready profile selects an existing storage target. Query/document prefixes form part of effective input and cache key. Cache payload is little-endian float32. |
+| Observability | Python has an optional Langfuse boundary. Kotlin adds local OpenTelemetry, Prometheus, Grafana, and collector support while keeping Langfuse disabled locally. |
 
-The Python checked-in defaults are 800/120 chunking, top 5, 0.35 semantic floor, hybrid enabled, 20 candidates, RRF 60, 10 retained turns, and summary after 8 turns. The actual Kotlin `.env` must retain the active local values from the Python `.env`, including endpoints, selected providers, workspace/profile names, and database host. Secrets remain only in ignored `.env` files.
+## Spring Boot configuration baseline
 
-## Implementation order
+RDP-02 translates the current Python `.env` into standard Spring Boot configuration: common non-secret settings in `application.yml`, local/provider-specific settings in profile YAML, and secret values supplied through ordinary environment-variable placeholders. It does not use a custom `.env` import as an application configuration mechanism.
 
-### SVC-01 — Freeze Python backend evidence
+| Python group | Spring Boot target |
+| --- | --- |
+| Runtime and identity | `server.*`, `logging.*`, and typed `app.auth.*` properties |
+| PostgreSQL | `spring.datasource.*` plus typed `app.database.*` schema, table, vector-dimension, and Entra settings |
+| Chat and embeddings | `spring.ai.*` provider settings plus typed `app.rag.*` profile and timeout settings |
+| RAG, assets, memory | Typed `app.rag.*`, `app.assets.*`, and `app.memory.*` properties |
+| Telemetry | `management.*`, `spring.otel.*`, and typed `app.observability.*` properties; Langfuse remains off locally |
 
-- Copy or reference the Python API schemas, backend tests, evaluation datasets, prompts, exact abstentions, loader fixtures, and current `.env` key/value configuration.
-- Record the source commit above in Kotlin test fixtures. Treat Python tests and behavior as the source of truth if documents conflict.
-- Gate: a Kotlin parity matrix maps each Python module/test to an intended Kotlin component and test. No assumptions remain about payloads, SSE events, errors, or fallback wording.
+The checked-in Python defaults are chunk size 800, overlap 120, top 5, score floor 0.35, hybrid enabled, 20 candidates, RRF 60, 10 retained turns, and summary refresh after 8 turns. Preserve those values in Spring configuration unless the active Python configuration supplies a different value. Secrets stay outside committed YAML.
 
-### SVC-02 — Align build and configuration
+## Ordered task breakdown
 
-- Simplify the Maven dependency set: retain the Spring AI BOM and provider starters needed for the active configuration; remove duplicate PDF reader declarations and prevent pgvector/chat-memory auto-configuration from owning persistence.
-- Add `spring.config.import=optional:file:.env[.properties]` (or equivalent) and typed `@ConfigurationProperties` that bind the Python variable names directly.
-- Create the ignored Kotlin `.env` from the current Python `.env`; update `.env.example` with Python-compatible, non-secret defaults. Replace outdated profile property names and hard-coded topology comments.
-- Gate: a configuration test loads the copied `.env` without values leaking to logs and proves Kotlin resolves the same active provider, model, database/schema/table, workspace, profile, and tuning values as Python.
+### RDP-01 — Freeze API and evaluation evidence
 
-### SVC-03 — Shared database compatibility layer
+- Freeze the Python API request/response and SSE contracts that Kotlin exposes, including the essential authorization, error, session, asset, ingestion, and chat cases.
+- Use the copied [English golden cases](../evaluation/golden-cases.jsonl) and [Hebrew golden cases](../evaluation/golden-cases-heb.jsonl) as the primary answer-quality parity data.
+- Record the source revision and select only the Python tests that protect these contracts and high-risk backend behavior.
 
-- Implement a read-only `RagSchemaValidator`. Verify `rag.schema_migrations` contains exactly the five required versions, the required tables/columns exist, `document_chunks.embedding` matches the configured vector dimension, and the selected ready model profile points to an existing compatible table.
-- Implement JDBC repositories matching Python SQL for workspaces, sessions, conversation summaries/turns, chunks, source documents, model profiles/cache, and assets. Use parameterized SQL and a strict identifier allow-list for schema/table/profile storage targets.
-- Use deterministic UUIDv5 compatible with Python's `uuid.uuid5(uuid.NAMESPACE_URL, chunk_id)`. Preserve JSONB keys and float32 cache encoding.
-- Gate: repository fixture tests read Python-created rows and produce rows Python can read. Kotlin performs no DDL and does not modify data during startup validation.
+**Done when:** API contract tests and golden-case evaluation coverage are defined, and the selected Python tests/fixtures are recorded with their Kotlin equivalents. A one-to-one port of every Python test is not required.
 
-### SVC-04 — Identity, workspaces, sessions, assets, and errors
+### RDP-02 — Build and configuration alignment
 
-- Port local and trusted-gateway principal resolution, workspace membership checks, session ownership masking, retention, asset authorization, MIME allow-list, ETag, cache control, and safe error envelope.
-- Gate: Python authorization/session/asset test cases pass against Kotlin; a foreign or archived session is indistinguishable from a missing one.
+- Simplify Maven dependencies; retain Boot 4.1.1, Spring AI 2.0.1, Kotlin 2.3.21, and only provider modules required by the active configuration.
+- Remove duplicate PDF dependencies and disable pgvector/chat-memory schema auto-configuration.
+- Translate active Python `.env` semantics into `application.yml` and profile YAML using standard Spring Boot property names and typed `@ConfigurationProperties`.
+- Use Spring environment placeholders for credentials and tokens; replace obsolete property names and hard-coded topology comments in YAML/README.
 
-### SVC-05 — Retrieval, chat, profiles, and memory
+**Done when:** configuration loads without secret logging and resolves the same selected provider, model, database/schema/table, workspace/profile, and RAG settings as Python using regular Spring Boot conventions.
 
-- Build provider-neutral `ChatGateway` and `EmbeddingGateway`. Use Spring AI only at these boundaries: OpenAI-compatible or Azure chat, Ollama or Azure embedding.
-- Reproduce query rewriting, prompt construction, grounded abstention, semantic thresholding, PostgreSQL lexical search, RRF, reranking toggle, source/asset references, and persistence of original turns.
-- Reproduce profile resolution, prefix-aware cache keys, float-vector length checks, profile-specific storage-target lookup, and profile warming without re-chunking.
-- Gate: Python evaluation cases and retrieval fixtures match for ranking, grounding, citations, profile filtering, cache behavior, and session summaries.
+### RDP-03 — Local telemetry platform and application foundation
 
-### SVC-06 — Loaders, chunkers, and source lifecycle
+- Add Spring Boot Actuator, Micrometer Prometheus registry, OpenTelemetry SDK/exporter, trace/log correlation, and typed telemetry configuration.
+- Add a local Docker Compose stack for Prometheus, Grafana, and the OpenTelemetry Collector. The service exports OTLP to the collector and Prometheus exposes a scrape endpoint.
+- Keep Langfuse disabled in the local Spring profile; provide a disabled-by-default Langfuse adapter/configuration for the workplace environment.
+- Add health/readiness with no model call for health and explicit database/model readiness details.
 
-- Port Markdown, HTML, text, PDF, Word, Python, Java, Kotlin, and generic-code loaders. Preserve document ordering, code symbols/line ranges, repository metadata, and embedded image associations.
-- Preserve the default chunking profile and deterministic chunk IDs: `{docId}:{index}` for default and `{docId}:{profile}:{index}` otherwise.
-- Embed changed content before beginning the database transaction; then replace source, chunks, and asset links atomically. Delete stale documents only below the scanned root. Ensure dry run calls neither embedding nor persistence.
-- Gate: Python loader/chunker/ingestion tests pass, including unchanged skip, replacement failure rollback, recursive cleanup, dry run, assets, and code metadata.
+**Done when:** local Grafana shows service metrics and traces arrive in the collector with Langfuse absent.
 
-### SVC-07 — Streaming and observability
+### RDP-04 — Shared schema validator and domain model
 
-- Port completed and streaming chat behavior, including exact SSE event order, terminal error handling, cancellation, and no retry loop after a disconnect.
-- Port readiness detail, provider/database failure handling, and optional Langfuse behavior without raw-content capture unless `LANGFUSE_CAPTURE_CONTENT=true`.
-- Gate: stream, health/readiness, observability, and failure-path Python tests pass. Routine tests do not call a live model or database.
+- Implement read-only validation of the five Python-applied schema versions, tables, columns, vector dimensions, selected ready profile, and profile storage target.
+- Define Kotlin domain types matching Python documents, chunks, source references, assets, sessions, profiles, and API DTOs.
 
-### SVC-08 — Cross-runtime verification
+**Done when:** Kotlin starts against a valid Python database without writes and fails with a precise diagnostic for an invalid schema/profile.
 
-- You run the planned shared-database verification against the existing RAG-dev-plane environment. Kotlin first validates without writes, then uses a dedicated workspace/profile for controlled ingest, retrieval, session, profile-cache, and asset round trips.
-- Compare Python reads after Kotlin writes and Kotlin reads after Python writes. Keep the production/default workspace untouched during this exercise.
-- Gate: you confirm both runtimes operate safely against the same database and the Kotlin service passes its parity suite. Only then consider an isolated Embabel experiment.
+### RDP-05 — JDBC persistence interoperability
 
-## Risks to resolve during implementation
+- Implement repositories for chunks/source documents, workspaces/memberships, sessions/turns/summaries, assets/chunk links, model profiles, and embedding cache.
+- Match Python UUIDv5 derivation, JSONB keys, vector literals/types, full-text query semantics, cache byte layout, SQL ordering, and transaction boundaries.
 
-1. Spring AI's `PgVectorStore` is not a safe owner of this schema. Its auto-initialization and document mapping may diverge from Python's UUID, metadata, source lifecycle, full-text, profile, and asset behavior. The JDBC layer is required.
-2. The active Python `.env` has not been copied into this workspace. SVC-02 must transfer its current values without printing secrets.
-3. Azure/Entra paths need an explicit Kotlin token-provider implementation if the active `.env` selects `PG_USE_ENTRA=true` or an Azure provider. Validate the active local path first.
-4. Alternative model profiles require a table that already exists in the Python-managed schema and has the profile's exact vector dimension. Kotlin must reject a missing or incompatible target instead of provisioning one.
+**Done when:** Kotlin reads Python-created fixtures and Python reads controlled Kotlin-created fixtures in a dedicated workspace/profile.
+
+### RDP-06 — Document parsing foundation
+
+- Implement loader registry, supported-extension checks, 50 MiB file limit, recursive directory scan behavior, deterministic traversal, and skipped-file reporting.
+- Port plain text, Markdown/MDX, HTML, and PDF parsing. Preserve titles, source type/path, stable doc IDs, HTML visible-text extraction, and PDF page provenance/page-break markers.
+
+**Done when:** Python loader fixtures for text, Markdown, HTML, PDF, unsupported paths, oversized files, and recursive scanning pass in Kotlin.
+
+### RDP-07 — Word parsing and embedded-image extraction
+
+- Port safe `.docx` package validation and ordered content traversal for headings, paragraphs, lists, tables, and page-break hints.
+- Preserve block IDs, ordinals, offsets, sections, document title, and image anchors.
+- Extract embedded image bytes into the private asset store and preserve relationship ID, anchor block, ordinal, underlying block text or following caption, alt text, media type, original name, byte size, and content hash.
+- Do not add OCR, visual embedding, or image recognition.
+
+**Done when:** Word fixtures prove structural text order, unsafe-package rejection, image byte persistence, and exact image-to-chunk linkage metadata.
+
+### RDP-08 — Code parsing and chunking
+
+- Port recursive/default text chunking and named chunking profiles with 800/120 default behavior.
+- Port Python AST chunking plus Tree-sitter Java and Kotlin declaration-aware chunking. Preserve module/class/function/type symbols, enclosing type, language, line range, and generic fallback for malformed source.
+- Preserve chunk identifiers: `{docId}:{index}` for `default`, `{docId}:{profile}:{index}` otherwise.
+
+**Done when:** Python chunker and code-ingestion fixtures produce equivalent chunk boundaries, IDs, and metadata.
+
+### RDP-09 — Asset lifecycle and ingestion
+
+- Implement content-addressed private asset storage and asset limits; persist `document_assets` and `chunk_assets` links through the shared schema.
+- Port content hashing, unchanged no-op, dry run with no provider/database calls, pre-embedding before transaction, atomic replacement, and root-scoped stale-file deletion.
+- Include all loader types from RDP-06 through RDP-08.
+
+**Done when:** Python ingestion tests pass for changed/unchanged files, rollback safety, dry run, recursive deletion, all document classes, and image association.
+
+### RDP-10 — Identity, workspaces, sessions, API errors, and assets
+
+- Port local and trusted-gateway principal resolution, workspace authorization, session ownership masking, durable memory retention, asset authorization, MIME allow-list, ETag, cache control, and safe errors.
+
+**Done when:** Python authorization, session, and asset tests pass; foreign/missing/archived sessions produce the same masked outcome.
+
+### RDP-11 — Providers, profiles, and embedding cache
+
+- Implement provider-neutral gateways backed by Spring AI: OpenAI-compatible/Azure chat and Ollama/Azure embeddings.
+- Implement ready-profile lookup, prefix-aware effective input, vector-length checks, profile storage target selection, float32 cache compatibility, and profile warming without re-chunking.
+- Support Azure/Entra token providers only when selected by active configuration.
+
+**Done when:** Python model-profile and cache tests pass, and Kotlin rejects missing/incompatible profile targets without DDL.
+
+### RDP-12 — Retrieval, grounded chat, and memory
+
+- Port follow-up rewrite, bounded turns/summaries, grounded prompt, abstention, semantic search, lexical search, thresholding, RRF, reranking option, citations, debug data, and completed chat persistence.
+
+**Done when:** Python retrieval, chat, and evaluation fixtures match on rankings, sources, grounding, and memory behavior.
+
+### RDP-13 — Streaming and telemetry instrumentation
+
+- Port SSE answer/meta/error/done behavior, cancellation, and provider failure handling.
+- Instrument all operations with low-cardinality metrics and spans: request count/latency/status; ingestion documents/chunks/assets/skips/failures; loader/chunker duration; embedding calls/cache hits/dimension failures; vector/lexical/RRF/rerank duration and candidate counts; chat time-to-first-token/tokens/completion; session operations; asset reads; database query/connection-pool health; and schema validation.
+- Exclude prompts, document text, user questions, paths, session IDs, workspace IDs, and provider responses from metric labels and default span attributes.
+
+**Done when:** Prometheus captures the metric families, Grafana dashboards display throughput/latency/error/cache/retrieval/ingestion views, collector traces cover request-to-provider/database flow, and streaming tests pass.
+
+### RDP-14 — Evaluation, resilience, and alternative storage
+
+- Port Python golden evaluation runner/datasets and failure-path tests.
+- Keep Qdrant as the Python-supported alternative behind the same storage interface; PostgreSQL remains the shared-runtime target and must reach parity first.
+- Validate provider/database unavailability, timeout, cancellation, telemetry failure isolation, and retention behavior.
+
+**Done when:** ordinary tests make no live calls, evaluation fixtures pass, and optional integrations are explicit opt-in.
+
+### RDP-15 — Cross-runtime verification
+
+- Run read-only Kotlin validation against the existing RAG-dev-plane database.
+- In a dedicated workspace/profile, perform controlled Python-to-Kotlin and Kotlin-to-Python round trips for parsed documents, assets, chunks, retrieval, sessions, model cache, and profile selection.
+- Keep the default workspace untouched.
+
+**Done when:** you confirm both runtimes work safely against the same database.
+
+### EXP-01 — Optional Embabel experiment
+
+After RDP-15, evaluate an isolated Embabel workflow with explicit tool allow-list, time/cost limits, citations, traces, cancellation, and approval for mutations.
+
+**Done when:** it demonstrates a documented benefit without changing any RDP parity behavior.
+
+## Local observability deliverables
+
+| Component | Purpose |
+| --- | --- |
+| Spring Actuator + Micrometer | Health/readiness and Prometheus metrics endpoint. |
+| OpenTelemetry SDK | Creates traces and correlates them with structured logs. |
+| OpenTelemetry Collector | Receives OTLP, samples/routes telemetry, and exposes local diagnostics. |
+| Prometheus | Scrapes application/collector metrics and retains local time series. |
+| Grafana | Dashboards for HTTP, ingestion, parsing, chunks/assets, retrieval, cache, model calls, database, streams, and errors. |
+| Langfuse adapter | Disabled locally; activated only by workplace configuration and policy. |
 
 ## Approval point
 
-Approve this plan to start SVC-01 and SVC-02. The first implementation output will be a Python-to-Kotlin parity matrix, a secret-safe `.env` alignment report, and configuration/build changes; it will not change the shared database.
+Approve this breakdown to start RDP-01 through RDP-03. The first implementation output will be API/golden evaluation evidence, Spring YAML alignment, and the local observability foundation. It will not modify the shared database.

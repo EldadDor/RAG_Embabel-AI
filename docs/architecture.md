@@ -18,7 +18,9 @@ HTTP API
   │                    │                    └─ assets and chunk links
   │                    └─ EmbeddingGateway ─ Spring AI embedding model
   ├─ ChatGateway ─ Spring AI chat model
-  └─ IngestionService ─ loaders, chunkers, private asset store
+  ├─ IngestionService ─ loaders, chunkers, private asset store
+  └─ Telemetry ─ Actuator/Micrometer ─ Prometheus
+                └─ OpenTelemetry SDK ─ OTel Collector ─ Grafana
 ```
 
 ## Database contract
@@ -37,9 +39,15 @@ For retrieval, Kotlin resolves a ready model and chunking profile, rewrites foll
 
 ## Configuration
 
-The ignored Kotlin `.env` mirrors the active RAG-dev-plane `.env` using the same names: `PG_*`, `CHAT_*`, `EMBEDDING_*`, `MODEL_PROFILE`, `CHUNK*`, retrieval, assets, memory, identity, and observability variables. Typed Spring configuration maps those names to Kotlin services. `.env.example` provides non-secret equivalents only.
+Standard Spring Boot YAML and profiles express the active RAG-dev-plane configuration: `spring.datasource.*` for PostgreSQL, `spring.ai.*` for providers, `management.*` and `spring.otel.*` for telemetry, and typed `app.*` properties for RAG behavior. Credentials and tokens are ordinary environment-variable placeholders, never committed configuration values.
 
 The active provider configuration determines the initial Spring AI adapters. OpenAI-compatible/Azure chat and Ollama/Azure embeddings remain independent. Azure PostgreSQL Entra authentication is enabled only when the active configuration selects it.
+
+## Observability
+
+Local runtime observability uses Actuator, Micrometer, Prometheus, Grafana, the OpenTelemetry SDK, and an OpenTelemetry Collector. Instrument HTTP, parsing/chunking, ingestion, assets, PostgreSQL, embedding/cache, retrieval/reranking, chat/streaming, sessions, schema validation, and failures. Metric labels and default span attributes exclude user content, source text, document paths, workspace IDs, session IDs, and provider responses.
+
+Langfuse remains a separate disabled-by-default adapter. It is enabled only by workplace configuration, after content-capture policy is set.
 
 ## Verification
 

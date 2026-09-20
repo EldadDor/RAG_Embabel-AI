@@ -4,14 +4,21 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| SVC-01 | Freeze Python backend evidence | Approval of [PLAN.md](PLAN.md) | Python source revision, API/tests/prompts/evaluation fixtures, and active configuration are mapped to Kotlin components. |
-| SVC-02 | Align build and configuration | SVC-01 | Kotlin `.env` mirrors active Python configuration; typed binding, dependency cleanup, and no persistence auto-initialization are verified. |
-| SVC-03 | Implement shared database compatibility | SVC-02 | Kotlin validates, reads, and writes the Python-managed schema without DDL; cross-language fixtures pass. |
-| SVC-04 | Port authorization, sessions, assets, and errors | SVC-03 | Python authorization/session/asset behavior passes in Kotlin. |
-| SVC-05 | Port retrieval, chat, profiles, and memory | SVC-03 | Retrieval/evaluation/profile/cache fixtures match Python. |
-| SVC-06 | Port ingestion and loaders | SVC-03 | Chunking, asset, dry-run, replacement, and cleanup fixtures match Python. |
-| SVC-07 | Port streaming and observability | SVC-04 through SVC-06 | Streaming, readiness, observability, and failure-path tests pass without routine live calls. |
-| SVC-08 | Verify shared runtime | SVC-07 and user-run environment | Controlled Python/Kotlin round trips succeed in a dedicated workspace/profile. |
-| EXP-01 | Evaluate isolated Embabel feature | SVC-08 | A separately exposed experiment demonstrates benefit without changing parity behavior. |
+| RDP-01 | Freeze API and evaluation evidence | Approval of [PLAN.md](PLAN.md) | API contracts, copied golden cases, and selected high-risk Python fixtures are mapped to Kotlin tests. |
+| RDP-02 | Build and Spring Boot configuration alignment | RDP-01 | Standard Spring Boot YAML/profiles reflect active Python configuration; typed binding and dependency cleanup are verified. |
+| RDP-03 | Local telemetry platform and application foundation | RDP-02 | OTel Collector, Prometheus, Grafana, Actuator, and local trace/metric export work without Langfuse. |
+| RDP-04 | Shared schema validator and domain model | RDP-02 | Kotlin validates the Python-managed schema without DDL. |
+| RDP-05 | JDBC persistence interoperability | RDP-04 | Controlled Python/Kotlin cross-language repository fixtures pass. |
+| RDP-06 | Document parsing foundation | RDP-02 | Text, Markdown, HTML, PDF, registry, directory scan, and fixture behavior match Python. |
+| RDP-07 | Word parsing and embedded-image extraction | RDP-06 | DOCX structure, safety, image bytes, and image-to-chunk linkage match Python. |
+| RDP-08 | Code parsing and chunking | RDP-06 | Text/profile/Python/Java/Kotlin chunking and metadata fixtures match Python. |
+| RDP-09 | Asset lifecycle and ingestion | RDP-05 through RDP-08 | Ingestion, atomic replacement, dry run, cleanup, and assets match Python. |
+| RDP-10 | Identity, sessions, API errors, and assets | RDP-05 | Authorization/session/asset behavior matches Python. |
+| RDP-11 | Providers, profiles, and embedding cache | RDP-05 | Provider/profile/cache behavior matches Python with no schema creation. |
+| RDP-12 | Retrieval, grounded chat, and memory | RDP-10 and RDP-11 | Retrieval/chat/evaluation fixtures match Python. |
+| RDP-13 | Streaming and telemetry instrumentation | RDP-03 and RDP-12 | Streaming behavior and full local metrics/tracing coverage pass. |
+| RDP-14 | Evaluation, resilience, and alternative storage | RDP-13 | Evaluation/failure tests pass; Qdrant remains a supported alternative. |
+| RDP-15 | Cross-runtime verification | RDP-09 through RDP-14 and user-run environment | Controlled shared-database round trips succeed in a dedicated workspace/profile. |
+| EXP-01 | Evaluate isolated Embabel feature | RDP-15 | A separately exposed experiment demonstrates benefit without changing parity behavior. |
 
 See [PLAN.md](PLAN.md) for scope, sequencing, and phase-specific checks. Move a row here into [work_current_phase.md](work_current_phase.md) before implementation starts.
