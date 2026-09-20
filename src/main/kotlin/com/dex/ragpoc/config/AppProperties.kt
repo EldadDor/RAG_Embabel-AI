@@ -12,6 +12,7 @@ data class AppProperties(
     val assets: Assets = Assets(),
     val memory: Memory = Memory(),
     val observability: Observability = Observability(),
+    val telemetry: Telemetry = Telemetry(),
     val chat: Chat = Chat(),
     val embedding: Embedding = Embedding(),
 ) {
@@ -63,6 +64,13 @@ data class AppProperties(
 
     data class Observability(
         val langfuseEnabled: Boolean = false,
+    )
+
+    data class Telemetry(
+        val serviceName: String = "rag-embabel-ai",
+        val metricsExportEnabled: Boolean = true,
+        val metricsEndpoint: String = "http://localhost:4318/v1/metrics",
+        val tracesEndpoint: String = "http://localhost:4318/v1/traces",
     )
 
     data class Chat(

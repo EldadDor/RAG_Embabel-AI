@@ -21,6 +21,22 @@ server:
   port: ${API_PORT:8080}
 
 management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${APP_ENV:local}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_ENABLED:true}
+        url: ${OTEL_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
   endpoints:
     web:
       exposure:
@@ -29,6 +45,21 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACING_SAMPLING_PROBABILITY:1.0}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${OTEL_SERVICE_NAME:${spring.application.name}}
+      service.version: ${APP_VERSION:dev}
+      deployment.environment.name: ${APP_ENV:local}
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
 
 app:
   environment: ${APP_ENV:local}
@@ -70,6 +101,11 @@ app:
     summary-after-turns: ${MEMORY_SUMMARY_AFTER_TURNS:8}
   observability:
     langfuse-enabled: ${LANGFUSE_ENABLED:false}
+  telemetry:
+    service-name: ${OTEL_SERVICE_NAME:${spring.application.name}}
+    metrics-export-enabled: ${OTEL_METRICS_ENABLED:true}
+    metrics-endpoint: ${OTEL_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
+    traces-endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
 
 logging:
   level:
