@@ -1,14 +1,14 @@
 # Next phase backlog
 
-**Last reviewed:** 2026-09-19
+**Last reviewed:** 2026-09-22
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
 | RDP-05 | JDBC persistence interoperability | RDP-04 | Controlled Python/Kotlin cross-language repository fixtures pass. |
 | RDP-06 | Document parsing foundation | RDP-02 | Text, Markdown, HTML, PDF, registry, directory scan, and fixture behavior match Python. |
-| RDP-07 | Word parsing and embedded-image extraction | RDP-06 | DOCX structure, safety, image bytes, and image-to-chunk linkage match Python. |
+| RDP-07 | DOCX parsing and embedded-image extraction with docx4j | RDP-06 | docx4j/JAXB works on JDK 25; DOCX structure, package safety, image bytes, and image-to-chunk linkage match Python. |
 | RDP-08 | Code parsing and chunking | RDP-06 | Text/profile/Python/Java/Kotlin chunking and metadata fixtures match Python. |
-| RDP-09 | Asset lifecycle and ingestion | RDP-05 through RDP-08 | Ingestion, atomic replacement, dry run, cleanup, and assets match Python. |
+| RDP-09 | Asset lifecycle and ingestion | RDP-05, RDP-06, RDP-07, and RDP-08 | Ingestion starts only after DOCX parsing passes; atomic replacement, dry run, cleanup, all loaders, and assets match Python. |
 | RDP-10 | Identity, sessions, API errors, and assets | RDP-05 | Authorization/session/asset behavior matches Python. |
 | RDP-11 | Providers, profiles, and embedding cache | RDP-05 | Provider/profile/cache behavior matches Python with no schema creation. |
 | RDP-12 | Retrieval, grounded chat, and memory | RDP-10 and RDP-11 | Retrieval/chat/evaluation fixtures match Python. |

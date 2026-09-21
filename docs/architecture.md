@@ -29,6 +29,8 @@ RAG-dev-plane owns `rag.schema_migrations` and the five applied migration versio
 
 `rag.document_chunks` is not a generic Spring AI collection. Its primary key is Python UUIDv5 derived from the stable chunk ID; its JSONB metadata controls workspace/profile scope and carries provenance, assets, and code metadata. Queries use pgvector cosine distance and PostgreSQL full-text search, with application-side RRF. The Kotlin JDBC repository is therefore the interoperability boundary.
 
+DOCX handling is a parser boundary completed before ingestion. It uses docx4j with a JDK 25-compatible JAXB runtime to produce ordered text blocks and extracted image metadata/bytes. Ingestion consumes that parsed result and persists assets and chunk links only after parsing fixtures pass.
+
 Profile storage targets come from `rag.model_profiles` and are valid only when an existing table has the profile's exact `vector(n)` column. Cache entries in `rag.embedding_cache` are little-endian float32 bytes. Query/document prefixes are included in the effective embedding input and cache key.
 
 ## Runtime behavior

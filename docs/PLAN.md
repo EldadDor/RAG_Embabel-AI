@@ -2,7 +2,7 @@
 
 **Status:** revised for approval
 
-**Last reviewed:** 2026-09-19
+**Last reviewed:** 2026-09-22
 
 **Authoritative source:** `EldadDor/RAG-dev-plane` at `92a594e8e3bec694b1a893563f63d8a220605dcd`.
 
@@ -96,14 +96,15 @@ The checked-in Python defaults are chunk size 800, overlap 120, top 5, score flo
 
 **Done when:** Python loader fixtures for text, Markdown, HTML, PDF, unsupported paths, oversized files, and recursive scanning pass in Kotlin.
 
-### RDP-07 — Word parsing and embedded-image extraction
+### RDP-07 — DOCX parsing and embedded-image extraction with docx4j
 
+- Use docx4j as the `.docx` package and document-model implementation, including a compatible JAXB runtime for JDK 25.
 - Port safe `.docx` package validation and ordered content traversal for headings, paragraphs, lists, tables, and page-break hints.
 - Preserve block IDs, ordinals, offsets, sections, document title, and image anchors.
 - Extract embedded image bytes into the private asset store and preserve relationship ID, anchor block, ordinal, underlying block text or following caption, alt text, media type, original name, byte size, and content hash.
 - Do not add OCR, visual embedding, or image recognition.
 
-**Done when:** Word fixtures prove structural text order, unsafe-package rejection, image byte persistence, and exact image-to-chunk linkage metadata.
+**Done when:** DOCX fixtures prove structural text order, unsafe/corrupt/encrypted-package rejection, image byte extraction, and exact image-to-chunk linkage metadata. The parser and its fixtures must pass before RDP-09 ingestion work begins.
 
 ### RDP-08 — Code parsing and chunking
 
@@ -117,7 +118,7 @@ The checked-in Python defaults are chunk size 800, overlap 120, top 5, score flo
 
 - Implement content-addressed private asset storage and asset limits; persist `document_assets` and `chunk_assets` links through the shared schema.
 - Port content hashing, unchanged no-op, dry run with no provider/database calls, pre-embedding before transaction, atomic replacement, and root-scoped stale-file deletion.
-- Include all loader types from RDP-06 through RDP-08.
+- Include all loader types from RDP-06 through RDP-08. RDP-07 DOCX parsing and image linkage are required inputs, not work deferred into ingestion.
 
 **Done when:** Python ingestion tests pass for changed/unchanged files, rollback safety, dry run, recursive deletion, all document classes, and image association.
 
