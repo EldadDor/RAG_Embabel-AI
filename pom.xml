@@ -107,6 +107,13 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>org.docx4j</groupId>
+            <artifactId>docx4j-core</artifactId>
+            <version>17.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- ======================================================= -->
         <!-- Kotlin                                                    -->
         <!-- ======================================================= -->
