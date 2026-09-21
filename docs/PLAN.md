@@ -158,6 +158,8 @@ The checked-in Python defaults are chunk size 800, overlap 120, top 5, score flo
 
 **Done when:** ordinary tests make no live calls, evaluation fixtures pass, and optional integrations are explicit opt-in.
 
+The existing Python-ingested PostgreSQL corpus may be used read-only for Kotlin retrieval and golden-case compatibility checks. New user-provided documents are requested only when RDP-09 reaches its opt-in ingestion integration test.
+
 ### RDP-15 — Cross-runtime verification
 
 - Run read-only Kotlin validation against the existing RAG-dev-plane database.
