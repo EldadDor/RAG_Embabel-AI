@@ -4,7 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-04 | Shared schema validator and domain model | RDP-02 | Kotlin validates the Python-managed schema without DDL. |
 | RDP-05 | JDBC persistence interoperability | RDP-04 | Controlled Python/Kotlin cross-language repository fixtures pass. |
 | RDP-06 | Document parsing foundation | RDP-02 | Text, Markdown, HTML, PDF, registry, directory scan, and fixture behavior match Python. |
 | RDP-07 | Word parsing and embedded-image extraction | RDP-06 | DOCX structure, safety, image bytes, and image-to-chunk linkage match Python. |
