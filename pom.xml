@@ -35,10 +35,19 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>me.paulschwarz</groupId>
+                <artifactId>spring-dotenv-bom</artifactId>
+                <version>5.1.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
+
     <dependencies>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -92,6 +101,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot4-dotenv</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- ======================================================= -->
         <!-- Kotlin                                                    -->
         <!-- ======================================================= -->
@@ -105,11 +120,7 @@
         </dependency>
 
         <!-- env loading -->
-        <dependency>
-            <groupId>me.paulschwarz</groupId>
-            <artifactId>spring-dotenv</artifactId>
-            <version>5.1.0</version>
-        </dependency>
+
 
         <!-- ======================================================= -->
         <!-- Test                                                      -->
