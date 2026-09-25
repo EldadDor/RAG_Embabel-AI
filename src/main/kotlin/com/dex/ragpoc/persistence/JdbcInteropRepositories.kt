@@ -1,6 +1,9 @@
 package com.dex.ragpoc.persistence
 
 import com.dex.ragpoc.config.AppProperties
+import com.dex.ragpoc.domain.ChatSession
+import com.dex.ragpoc.domain.ConversationSummary
+import com.dex.ragpoc.domain.ConversationTurn
 import com.dex.ragpoc.domain.ModelProfile
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
@@ -182,6 +185,182 @@ class JdbcEmbeddingCacheRepository(
                 { resultSet, _ -> resultSet.getInt("dimensions") },
                 cacheKey,
             ).firstOrNull()
+}
+
+@Repository
+class JdbcConversationRepository(
+    private val jdbcTemplate: JdbcTemplate,
+    properties: AppProperties,
+) {
+    private val schema = requireIdentifier("PG_SCHEMA", properties.database.schema)
+
+    fun listActiveOwned(
+        ownerId: String,
+        workspaceId: String,
+    ): List<ChatSession> =
+        jdbcTemplate.query(
+            """
+            SELECT session_id, owner_id, workspace_id, title, last_preview, archived
+            FROM $schema.chat_sessions
+            WHERE owner_id = ? AND workspace_id = ? AND archived = false
+            ORDER BY updated_at DESC, session_id DESC
+            """.trimIndent(),
+            ::mapSession,
+            ownerId,
+            workspaceId,
+        )
+
+    fun findActiveOwned(
+        sessionId: String,
+        ownerId: String,
+    ): ChatSession? =
+        jdbcTemplate
+            .query(
+                """
+                SELECT session_id, owner_id, workspace_id, title, last_preview, archived
+                FROM $schema.chat_sessions
+                WHERE session_id = ? AND owner_id = ? AND archived = false
+                """.trimIndent(),
+                ::mapSession,
+                sessionId,
+                ownerId,
+            ).firstOrNull()
+
+    fun create(session: ChatSession) {
+        require(!session.archived) { "A new chat session cannot be archived" }
+        jdbcTemplate.update(
+            """
+            INSERT INTO $schema.chat_sessions (session_id, owner_id, workspace_id, title, last_preview, archived)
+            VALUES (?, ?, ?, ?, ?, false)
+            """.trimIndent(),
+            session.sessionId,
+            session.ownerId,
+            session.workspaceId,
+            session.title,
+            session.lastPreview,
+        )
+    }
+
+    fun renameActiveOwned(
+        sessionId: String,
+        ownerId: String,
+        title: String,
+    ): Boolean =
+        jdbcTemplate.update(
+            """
+            UPDATE $schema.chat_sessions
+            SET title = ?, updated_at = now()
+            WHERE session_id = ? AND owner_id = ? AND archived = false
+            """.trimIndent(),
+            title,
+            sessionId,
+            ownerId,
+        ) == 1
+
+    fun archiveActiveOwned(
+        sessionId: String,
+        ownerId: String,
+    ): Boolean =
+        jdbcTemplate.update(
+            """
+            UPDATE $schema.chat_sessions
+            SET archived = true, updated_at = now()
+            WHERE session_id = ? AND owner_id = ? AND archived = false
+            """.trimIndent(),
+            sessionId,
+            ownerId,
+        ) == 1
+
+    @Transactional
+    fun appendTurn(
+        sessionId: String,
+        role: String,
+        content: String,
+        preview: String? = null,
+    ) {
+        require(role in setOf("user", "assistant")) { "Invalid conversation role: $role" }
+        require(content.isNotBlank()) { "Conversation content must not be blank" }
+        jdbcTemplate.update(
+            "INSERT INTO $schema.conversation_turns (session_id, role, content) VALUES (?, ?, ?)",
+            sessionId,
+            role,
+            content,
+        )
+        jdbcTemplate.update(
+            "UPDATE $schema.chat_sessions SET last_preview = ?, updated_at = now() WHERE session_id = ?",
+            preview ?: content.take(240),
+            sessionId,
+        )
+    }
+
+    fun recentTurns(
+        sessionId: String,
+        limit: Int,
+    ): List<ConversationTurn> {
+        require(limit in 1..100) { "Conversation turn limit must be between 1 and 100" }
+        return jdbcTemplate
+            .query(
+                """
+                SELECT id, session_id, role, content
+                FROM $schema.conversation_turns
+                WHERE session_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """.trimIndent(),
+                { resultSet, _ ->
+                    ConversationTurn(
+                        id = resultSet.getLong("id"),
+                        sessionId = resultSet.getString("session_id"),
+                        role = resultSet.getString("role"),
+                        content = resultSet.getString("content"),
+                    )
+                },
+                sessionId,
+                limit,
+            ).asReversed()
+    }
+
+    fun summary(sessionId: String): ConversationSummary? =
+        jdbcTemplate
+            .query(
+                "SELECT session_id, summary, last_turn_id FROM $schema.conversation_summaries WHERE session_id = ?",
+                { resultSet, _ ->
+                    ConversationSummary(
+                        sessionId = resultSet.getString("session_id"),
+                        summary = resultSet.getString("summary"),
+                        lastTurnId = resultSet.getLong("last_turn_id"),
+                    )
+                },
+                sessionId,
+            ).firstOrNull()
+
+    fun upsertSummary(summary: ConversationSummary) {
+        jdbcTemplate.update(
+            """
+            INSERT INTO $schema.conversation_summaries (session_id, summary, last_turn_id)
+            VALUES (?, ?, ?)
+            ON CONFLICT (session_id) DO UPDATE
+            SET summary = EXCLUDED.summary, last_turn_id = EXCLUDED.last_turn_id, updated_at = now()
+            """.trimIndent(),
+            summary.sessionId,
+            summary.summary,
+            summary.lastTurnId,
+        )
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun mapSession(
+        resultSet: java.sql.ResultSet,
+        rowNumber: Int,
+    ): ChatSession =
+        ChatSession(
+            sessionId = resultSet.getString("session_id"),
+            ownerId = resultSet.getString("owner_id"),
+            workspaceId = resultSet.getString("workspace_id"),
+            title = resultSet.getString("title"),
+            lastPreview = resultSet.getString("last_preview"),
+            archived = resultSet.getBoolean("archived"),
+        )
 }
 
 private fun requireIdentifier(
