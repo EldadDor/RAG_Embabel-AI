@@ -31,7 +31,7 @@ class Rdp05FixtureWriter(
                 mapOf(
                     "workspace_id" to workspaceId,
                     "chunking_profile" to "fixture-v1",
-                    "document_id" to documentId,
+                    "doc_id" to documentId,
                     "chunk_id" to chunkId,
                     "fixture_owner" to "kotlin",
                 ),
