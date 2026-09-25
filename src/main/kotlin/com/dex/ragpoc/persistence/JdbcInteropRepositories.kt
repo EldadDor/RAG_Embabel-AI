@@ -630,7 +630,7 @@ class JdbcDocumentAssetRepository(
         )
 }
 
-private fun requireIdentifier(
+internal fun requireIdentifier(
     propertyName: String,
     value: String,
 ): String {
