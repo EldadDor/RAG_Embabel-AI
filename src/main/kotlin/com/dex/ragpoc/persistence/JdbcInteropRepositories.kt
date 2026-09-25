@@ -5,6 +5,10 @@ import com.dex.ragpoc.domain.ChatSession
 import com.dex.ragpoc.domain.ConversationSummary
 import com.dex.ragpoc.domain.ConversationTurn
 import com.dex.ragpoc.domain.ModelProfile
+import com.dex.ragpoc.domain.SourceDocument
+import com.dex.ragpoc.domain.SourceType
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -361,6 +365,93 @@ class JdbcConversationRepository(
             lastPreview = resultSet.getString("last_preview"),
             archived = resultSet.getBoolean("archived"),
         )
+}
+
+@Repository
+class JdbcSourceDocumentRepository(
+    private val jdbcTemplate: JdbcTemplate,
+    private val objectMapper: ObjectMapper,
+    properties: AppProperties,
+) {
+    private val schema = requireIdentifier("PG_SCHEMA", properties.database.schema)
+
+    fun find(
+        workspaceId: String,
+        chunkingProfile: String,
+        documentId: String,
+    ): SourceDocument? =
+        jdbcTemplate
+            .query(
+                """
+                SELECT workspace_id, chunking_profile, doc_id, root_path, source_path, source_type,
+                       content_hash, metadata
+                FROM $schema.source_documents
+                WHERE workspace_id = ? AND chunking_profile = ? AND doc_id = ?
+                """.trimIndent(),
+                ::mapSourceDocument,
+                workspaceId,
+                chunkingProfile,
+                documentId,
+            ).firstOrNull()
+
+    fun upsert(document: SourceDocument) {
+        jdbcTemplate.update(
+            """
+            INSERT INTO $schema.source_documents
+                (workspace_id, chunking_profile, doc_id, root_path, source_path, source_type, content_hash, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb)
+            ON CONFLICT (workspace_id, chunking_profile, doc_id) DO UPDATE
+            SET root_path = EXCLUDED.root_path,
+                source_path = EXCLUDED.source_path,
+                source_type = EXCLUDED.source_type,
+                content_hash = EXCLUDED.content_hash,
+                metadata = EXCLUDED.metadata,
+                updated_at = now()
+            """.trimIndent(),
+            document.workspaceId,
+            document.chunkingProfile,
+            document.documentId,
+            document.rootPath,
+            document.sourcePath,
+            document.sourceType.name.lowercase(),
+            document.contentHash,
+            objectMapper.writeValueAsString(document.metadata),
+        )
+    }
+
+    fun delete(
+        workspaceId: String,
+        chunkingProfile: String,
+        documentId: String,
+    ): Boolean =
+        jdbcTemplate.update(
+            "DELETE FROM $schema.source_documents WHERE workspace_id = ? AND chunking_profile = ? AND doc_id = ?",
+            workspaceId,
+            chunkingProfile,
+            documentId,
+        ) == 1
+
+    private fun mapSourceDocument(
+        resultSet: java.sql.ResultSet,
+        @Suppress("UNUSED_PARAMETER")
+        rowNumber: Int,
+    ): SourceDocument {
+        val metadata =
+            objectMapper.readValue(
+                resultSet.getString("metadata"),
+                object : TypeReference<Map<String, Any?>>() {},
+            )
+        return SourceDocument(
+            workspaceId = resultSet.getString("workspace_id"),
+            chunkingProfile = resultSet.getString("chunking_profile"),
+            documentId = resultSet.getString("doc_id"),
+            rootPath = resultSet.getString("root_path"),
+            sourcePath = resultSet.getString("source_path"),
+            sourceType = SourceType.valueOf(resultSet.getString("source_type").uppercase()),
+            contentHash = resultSet.getString("content_hash"),
+            metadata = metadata,
+        )
+    }
 }
 
 private fun requireIdentifier(
