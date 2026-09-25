@@ -14,11 +14,40 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 data class AuthorizedWorkspace(
     val workspaceId: String,
     val displayName: String,
     val role: String,
+)
+
+data class StoredChunk(
+    val id: UUID,
+    val content: String,
+    val metadata: Map<String, Any?>,
+    val source: String? = null,
+    val pageNumber: Int? = null,
+    val chunkIndex: Int? = null,
+)
+
+data class StoredDocumentAsset(
+    val assetId: String,
+    val workspaceId: String,
+    val chunkingProfile: String,
+    val documentId: String,
+    val storageKey: String,
+    val contentHash: String,
+    val mediaType: String,
+    val byteSize: Long,
+    val originalName: String? = null,
+    val relationshipId: String? = null,
+    val ordinal: Int = 0,
+    val width: Int? = null,
+    val height: Int? = null,
+    val altText: String? = null,
+    val caption: String? = null,
+    val anchorBlockId: String? = null,
 )
 
 @Repository
@@ -452,6 +481,153 @@ class JdbcSourceDocumentRepository(
             metadata = metadata,
         )
     }
+}
+
+@Repository
+class JdbcChunkRepository(
+    private val jdbcTemplate: JdbcTemplate,
+    private val objectMapper: ObjectMapper,
+    properties: AppProperties,
+) {
+    private val schema = requireIdentifier("PG_SCHEMA", properties.database.schema)
+    private val chunkTable = requireIdentifier("PG_CHUNK_TABLE", properties.database.chunkTable)
+    private val dimensions = properties.database.vectorDimension
+
+    fun find(id: UUID): StoredChunk? =
+        jdbcTemplate
+            .query(
+                "SELECT id, content, metadata, source, page_number, chunk_index FROM $schema.$chunkTable WHERE id = ?",
+                ::mapChunk,
+                id,
+            ).firstOrNull()
+
+    fun upsert(
+        chunk: StoredChunk,
+        embedding: List<Float>,
+    ) {
+        require(embedding.size == dimensions) { "Chunk embedding dimension does not match the configured model profile" }
+        jdbcTemplate.update(
+            """
+            INSERT INTO $schema.$chunkTable (id, content, metadata, embedding, source, page_number, chunk_index)
+            VALUES (?, ?, ?::jsonb, ?::vector, ?, ?, ?)
+            ON CONFLICT (id) DO UPDATE
+            SET content = EXCLUDED.content,
+                metadata = EXCLUDED.metadata,
+                embedding = EXCLUDED.embedding,
+                source = EXCLUDED.source,
+                page_number = EXCLUDED.page_number,
+                chunk_index = EXCLUDED.chunk_index
+            """.trimIndent(),
+            chunk.id,
+            chunk.content,
+            objectMapper.writeValueAsString(chunk.metadata),
+            PostgresInteropCodec.vectorLiteral(embedding),
+            chunk.source,
+            chunk.pageNumber,
+            chunk.chunkIndex,
+        )
+    }
+
+    fun delete(id: UUID): Boolean = jdbcTemplate.update("DELETE FROM $schema.$chunkTable WHERE id = ?", id) == 1
+
+    private fun mapChunk(
+        resultSet: java.sql.ResultSet,
+        @Suppress("UNUSED_PARAMETER") rowNumber: Int,
+    ): StoredChunk =
+        StoredChunk(
+            id = resultSet.getObject("id", UUID::class.java),
+            content = resultSet.getString("content"),
+            metadata = objectMapper.readValue(resultSet.getString("metadata"), object : TypeReference<Map<String, Any?>>() {}),
+            source = resultSet.getString("source"),
+            pageNumber = resultSet.getObject("page_number", Int::class.java),
+            chunkIndex = resultSet.getObject("chunk_index", Int::class.java),
+        )
+}
+
+@Repository
+class JdbcDocumentAssetRepository(
+    private val jdbcTemplate: JdbcTemplate,
+    properties: AppProperties,
+) {
+    private val schema = requireIdentifier("PG_SCHEMA", properties.database.schema)
+
+    fun upsert(asset: StoredDocumentAsset) {
+        require(asset.byteSize >= 0) { "Asset byte size must not be negative" }
+        jdbcTemplate.update(
+            """
+            INSERT INTO $schema.document_assets
+                (asset_id, workspace_id, chunking_profile, doc_id, storage_key, content_hash, media_type,
+                 byte_size, original_name, relationship_id, ordinal, width, height, alt_text, caption, anchor_block_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (asset_id) DO UPDATE
+            SET storage_key = EXCLUDED.storage_key,
+                content_hash = EXCLUDED.content_hash,
+                media_type = EXCLUDED.media_type,
+                byte_size = EXCLUDED.byte_size,
+                original_name = EXCLUDED.original_name,
+                relationship_id = EXCLUDED.relationship_id,
+                ordinal = EXCLUDED.ordinal,
+                width = EXCLUDED.width,
+                height = EXCLUDED.height,
+                alt_text = EXCLUDED.alt_text,
+                caption = EXCLUDED.caption,
+                anchor_block_id = EXCLUDED.anchor_block_id
+            """.trimIndent(),
+            asset.assetId,
+            asset.workspaceId,
+            asset.chunkingProfile,
+            asset.documentId,
+            asset.storageKey,
+            asset.contentHash,
+            asset.mediaType,
+            asset.byteSize,
+            asset.originalName,
+            asset.relationshipId,
+            asset.ordinal,
+            asset.width,
+            asset.height,
+            asset.altText,
+            asset.caption,
+            asset.anchorBlockId,
+        )
+    }
+
+    fun linkToChunk(
+        workspaceId: String,
+        chunkingProfile: String,
+        documentId: String,
+        chunkId: String,
+        assetId: String,
+        displayOrder: Int,
+    ) {
+        require(displayOrder >= 0) { "Asset display order must not be negative" }
+        jdbcTemplate.update(
+            """
+            INSERT INTO $schema.chunk_assets (workspace_id, chunking_profile, doc_id, chunk_id, asset_id, display_order)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT (workspace_id, chunking_profile, chunk_id, asset_id) DO UPDATE
+            SET display_order = EXCLUDED.display_order
+            """.trimIndent(),
+            workspaceId,
+            chunkingProfile,
+            documentId,
+            chunkId,
+            assetId,
+            displayOrder,
+        )
+    }
+
+    fun deleteForDocument(
+        workspaceId: String,
+        chunkingProfile: String,
+        documentId: String,
+    ): Int =
+        jdbcTemplate.update(
+            "DELETE FROM $schema.document_assets WHERE workspace_id = ? AND chunking_profile = ? AND doc_id = ?",
+            workspaceId,
+            chunkingProfile,
+            documentId,
+        )
 }
 
 private fun requireIdentifier(
