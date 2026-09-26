@@ -71,8 +71,9 @@ Kotlin 2.3.21 · Spring Boot 4.1.x · Spring AI 2.0.1 · Embabel 1.5.2 · JDK 25
 Maven · JUnit 5 + Mockito
 
 ## Commands
-Build `mvn clean package` · Test `mvn test` · Run `mvn spring-boot:run` ·
-Format check `mvn spotless:check`
+Maven flow: run `mvn test` for verification or `mvn install` when an installed
+artifact is needed. Never run `mvn package`. Run `mvn spring-boot:run` only when
+the task requires the application. Format check: `mvn spotless:check`.
 
 ## Architecture
 - Separate controller / service / repository; no logic in controllers.

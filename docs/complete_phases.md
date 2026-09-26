@@ -11,5 +11,6 @@
 | API/evaluation and Spring configuration planning (DOC-05) | Completed 2026-09-20 | [Plan](PLAN.md) prioritizes API contracts and copied English/Hebrew golden cases, while configuration uses standard Spring Boot YAML/profiles. |
 | API and evaluation evidence (RDP-01) | Completed 2026-09-20 | [API and evaluation evidence](api_evaluation_contract.md) defines selected contract tests and the 19 English plus 13 Hebrew golden cases. |
 | JDBC persistence interoperability (RDP-05) | Completed 2026-09-26 | Kotlin and Python read controlled fixtures in both directions for workspace membership, documents/chunks, asset links, sessions/summaries, ready model profiles, and embedding cache values. Dedicated fixture workspaces remain in the shared database. Carry-over: RDP-06 begins loader registry, path-safety, text/Markdown/HTML/PDF parsing, and matching fixtures. |
+| Document parsing foundation (RDP-06) | Completed 2026-09-26 | Added a Python-compatible loader registry, size/path checks, deterministic directory scans, and text/Markdown/HTML/PDF parsers with local fixtures. `mvn test` passed 21 tests with 2 existing skips. Carry-over: RDP-07 DOCX parsing and image extraction, RDP-08 code parsing and chunking, then RDP-09 ingestion. |
 
-No implementation phase has been closed under the handoff plan. Close an implementation phase here only after its acceptance evidence is recorded in [work_current_phase.md](work_current_phase.md).
+Close an implementation phase here only after its acceptance evidence is recorded in [work_current_phase.md](work_current_phase.md).
