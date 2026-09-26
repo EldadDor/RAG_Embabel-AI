@@ -89,6 +89,7 @@ class DocumentLoaderRegistry(
                 ".html" to HtmlDocumentLoader,
                 ".htm" to HtmlDocumentLoader,
                 ".pdf" to PdfDocumentLoader,
+                ".docx" to WordDocumentLoader,
             )
     }
 }
