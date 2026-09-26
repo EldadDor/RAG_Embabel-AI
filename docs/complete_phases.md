@@ -15,4 +15,6 @@
 
 | DOCX parsing and embedded-image extraction (RDP-07) | Completed 2026-09-26 | Added a docx4j Word loader with the matching JAXB runtime, ZIP package validation, ordered headings/paragraphs/lists/tables/page breaks, section and offset metadata, and embedded-image bytes and anchors. JDK 25 `mvn test` passed 24 tests with 2 existing skips; no database or provider calls ran. Carry-over: RDP-08 code parsing and chunking, then RDP-09 ingestion; no open RDP-07 defects. |
 
+| Code parsing and chunking (RDP-08) | Completed 2026-09-26 | Added source/config loaders, default and named chunk profiles, stable chunk IDs and provenance, Markdown sections, and Tree-sitter Python/Java/Kotlin declaration chunks with malformed-source fallback. JDK 25 `mvn test` passed 32 tests with 2 existing skips; no live services ran. Carry-over: RDP-09 asset lifecycle and ingestion; no open RDP-08 defects. |
+
 Close an implementation phase here only after its acceptance evidence is recorded in [work_current_phase.md](work_current_phase.md).
