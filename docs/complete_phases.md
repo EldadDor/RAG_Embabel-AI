@@ -1,6 +1,6 @@
 # Completed phases
 
-**Last reviewed:** 2026-09-19
+**Last reviewed:** 2026-09-26
 
 | Phase | Status | Evidence |
 | --- | --- | --- |
@@ -12,5 +12,7 @@
 | API and evaluation evidence (RDP-01) | Completed 2026-09-20 | [API and evaluation evidence](api_evaluation_contract.md) defines selected contract tests and the 19 English plus 13 Hebrew golden cases. |
 | JDBC persistence interoperability (RDP-05) | Completed 2026-09-26 | Kotlin and Python read controlled fixtures in both directions for workspace membership, documents/chunks, asset links, sessions/summaries, ready model profiles, and embedding cache values. Dedicated fixture workspaces remain in the shared database. Carry-over: RDP-06 begins loader registry, path-safety, text/Markdown/HTML/PDF parsing, and matching fixtures. |
 | Document parsing foundation (RDP-06) | Completed 2026-09-26 | Added a Python-compatible loader registry, size/path checks, deterministic directory scans, and text/Markdown/HTML/PDF parsers with local fixtures. `mvn test` passed 21 tests with 2 existing skips. Carry-over: RDP-07 DOCX parsing and image extraction, RDP-08 code parsing and chunking, then RDP-09 ingestion. |
+
+| DOCX parsing and embedded-image extraction (RDP-07) | Completed 2026-09-26 | Added a docx4j Word loader with the matching JAXB runtime, ZIP package validation, ordered headings/paragraphs/lists/tables/page breaks, section and offset metadata, and embedded-image bytes and anchors. JDK 25 `mvn test` passed 24 tests with 2 existing skips; no database or provider calls ran. Carry-over: RDP-08 code parsing and chunking, then RDP-09 ingestion; no open RDP-07 defects. |
 
 Close an implementation phase here only after its acceptance evidence is recorded in [work_current_phase.md](work_current_phase.md).
