@@ -1,10 +1,9 @@
 # Next phase backlog
 
-**Last reviewed:** 2026-09-22
+**Last reviewed:** 2026-09-26
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-05 | JDBC persistence interoperability | RDP-04 | Controlled Python/Kotlin cross-language repository fixtures pass. |
 | RDP-06 | Document parsing foundation | RDP-02 | Text, Markdown, HTML, PDF, registry, directory scan, and fixture behavior match Python. |
 | RDP-07 | DOCX parsing and embedded-image extraction with docx4j | RDP-06 | docx4j/JAXB works on JDK 25; DOCX structure, package safety, image bytes, and image-to-chunk linkage match Python. |
 | RDP-08 | Code parsing and chunking | RDP-06 | Text/profile/Python/Java/Kotlin chunking and metadata fixtures match Python. |

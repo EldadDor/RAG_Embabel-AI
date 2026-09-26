@@ -7,6 +7,7 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Profile
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 
 /** Explicit, idempotent fixture writer for the Python/Kotlin RDP-05 compatibility check. */
 @Component
@@ -20,6 +21,7 @@ class Rdp05FixtureWriter(
     private val chunkTable = requireIdentifier("PG_CHUNK_TABLE", properties.database.chunkTable)
     private val dimensions = properties.database.vectorDimension
 
+    @Transactional
     override fun run(args: ApplicationArguments) {
         val workspaceId = "kotlin-rdp05-fixture-v1"
         val profile = "bge-m3"
