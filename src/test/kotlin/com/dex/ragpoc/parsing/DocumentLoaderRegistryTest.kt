@@ -39,6 +39,20 @@ class DocumentLoaderRegistryTest {
     }
 
     @Test
+    fun `loads source and configuration files with language provenance`() {
+        val python = tempDirectory.resolve("example.py").also { Files.writeString(it, "def hello():\n    return 'world'\n") }
+        val kotlin = tempDirectory.resolve("Example.KT").also { Files.writeString(it, "class Example") }
+        val yaml = tempDirectory.resolve("settings.yaml").also { Files.writeString(it, "enabled: true") }
+
+        val loaded = listOf(python, kotlin, yaml).map { registry.loadDocument(it) }
+
+        assertEquals(listOf(SourceType.CODE, SourceType.CODE, SourceType.CODE), loaded.map { it.sourceType })
+        assertEquals(listOf("python", "kotlin", "yaml"), loaded.map { it.metadata["language"] })
+        assertEquals(listOf("example.py", "Example.KT", "settings.yaml"), loaded.map { it.title })
+        assertEquals("def hello():\n    return 'world'\n", loaded.first().content)
+    }
+
+    @Test
     fun `rejects unsupported and oversized paths`() {
         val unsupported = tempDirectory.resolve("archive.zip").also { Files.writeString(it, "content") }
         val oversized = tempDirectory.resolve("large.txt").also { Files.writeString(it, "content") }

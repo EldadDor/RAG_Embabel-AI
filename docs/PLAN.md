@@ -109,7 +109,7 @@ The checked-in Python defaults are chunk size 800, overlap 120, top 5, score flo
 ### RDP-08 — Code parsing and chunking
 
 - Port recursive/default text chunking and named chunking profiles with 800/120 default behavior.
-- Port Python AST chunking plus Tree-sitter Java and Kotlin declaration-aware chunking. Preserve module/class/function/type symbols, enclosing type, language, line range, and generic fallback for malformed source.
+- Port declaration-aware Python, Java, and Kotlin chunking with bundled Tree-sitter grammars. Preserve module/class/function/type symbols, enclosing type, language, line range, and generic fallback for malformed source.
 - Preserve chunk identifiers: `{docId}:{index}` for `default`, `{docId}:{profile}:{index}` otherwise.
 
 **Done when:** Python chunker and code-ingestion fixtures produce equivalent chunk boundaries, IDs, and metadata.

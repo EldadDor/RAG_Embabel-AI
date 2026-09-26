@@ -31,6 +31,8 @@ RAG-dev-plane owns `rag.schema_migrations` and the five applied migration versio
 
 DOCX handling is a parser boundary completed before ingestion. It uses docx4j with a JDK 25-compatible JAXB runtime to produce ordered text blocks and extracted image metadata/bytes. Ingestion consumes that parsed result and persists assets and chunk links only after parsing fixtures pass.
 
+Document loading also preserves source-file language for code and configuration files. The chunking layer uses recursive text splitting with an 800-character size and 120-character overlap by default, with named profiles for alternate recursive settings. Bundled Tree-sitter grammars extract Python, Java, and Kotlin declarations and line ranges; malformed Java/Kotlin falls back to generic splitting. Chunk IDs include the document ID, profile name when nondefault, and chunk index. Persistence wiring remains part of RDP-09.
+
 Profile storage targets come from `rag.model_profiles` and are valid only when an existing table has the profile's exact `vector(n)` column. Cache entries in `rag.embedding_cache` are little-endian float32 bytes. Query/document prefixes are included in the effective embedding input and cache key.
 
 ## Runtime behavior

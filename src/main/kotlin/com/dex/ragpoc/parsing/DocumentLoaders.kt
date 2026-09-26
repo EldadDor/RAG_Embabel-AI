@@ -90,6 +90,22 @@ class DocumentLoaderRegistry(
                 ".htm" to HtmlDocumentLoader,
                 ".pdf" to PdfDocumentLoader,
                 ".docx" to WordDocumentLoader,
+                ".py" to CodeDocumentLoader,
+                ".js" to CodeDocumentLoader,
+                ".jsx" to CodeDocumentLoader,
+                ".ts" to CodeDocumentLoader,
+                ".tsx" to CodeDocumentLoader,
+                ".java" to CodeDocumentLoader,
+                ".cs" to CodeDocumentLoader,
+                ".go" to CodeDocumentLoader,
+                ".rs" to CodeDocumentLoader,
+                ".kt" to CodeDocumentLoader,
+                ".kts" to CodeDocumentLoader,
+                ".sql" to CodeDocumentLoader,
+                ".json" to CodeDocumentLoader,
+                ".yaml" to CodeDocumentLoader,
+                ".yml" to CodeDocumentLoader,
+                ".toml" to CodeDocumentLoader,
             )
     }
 }
@@ -97,6 +113,37 @@ class DocumentLoaderRegistry(
 object TextDocumentLoader : DocumentLoader {
     override fun load(sourcePath: Path): Document =
         document(sourcePath, SourceType.TEXT, readUtf8(sourcePath), title = fileStem(sourcePath))
+}
+
+object CodeDocumentLoader : DocumentLoader {
+    private val languages =
+        mapOf(
+            ".py" to "python",
+            ".js" to "javascript",
+            ".jsx" to "javascript",
+            ".ts" to "typescript",
+            ".tsx" to "typescript",
+            ".java" to "java",
+            ".cs" to "csharp",
+            ".go" to "go",
+            ".rs" to "rust",
+            ".kt" to "kotlin",
+            ".kts" to "kotlin",
+            ".sql" to "sql",
+            ".json" to "json",
+            ".yaml" to "yaml",
+            ".yml" to "yaml",
+            ".toml" to "toml",
+        )
+
+    override fun load(sourcePath: Path): Document =
+        document(
+            sourcePath,
+            SourceType.CODE,
+            readUtf8(sourcePath),
+            title = sourcePath.fileName.toString(),
+            metadata = mapOf("language" to (languages[extension(sourcePath)] ?: "unknown")),
+        )
 }
 
 object MarkdownDocumentLoader : DocumentLoader {

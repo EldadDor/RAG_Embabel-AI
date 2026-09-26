@@ -49,6 +49,7 @@ data class Chunk(
     val title: String? = null,
     val page: Int? = null,
     val section: String? = null,
+    val metadata: Map<String, Any?> = emptyMap(),
 )
 
 data class RetrievedChunk(
