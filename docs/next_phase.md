@@ -4,7 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-06 | Document parsing foundation | RDP-02 | Text, Markdown, HTML, PDF, registry, directory scan, and fixture behavior match Python. |
 | RDP-07 | DOCX parsing and embedded-image extraction with docx4j | RDP-06 | docx4j/JAXB works on JDK 25; DOCX structure, package safety, image bytes, and image-to-chunk linkage match Python. |
 | RDP-08 | Code parsing and chunking | RDP-06 | Text/profile/Python/Java/Kotlin chunking and metadata fixtures match Python. |
 | RDP-09 | Asset lifecycle and ingestion | RDP-05, RDP-06, RDP-07, and RDP-08 | Ingestion starts only after DOCX parsing passes; atomic replacement, dry run, cleanup, all loaders, and assets match Python. |

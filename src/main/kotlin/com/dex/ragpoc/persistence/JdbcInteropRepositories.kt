@@ -539,8 +539,8 @@ class JdbcChunkRepository(
             content = resultSet.getString("content"),
             metadata = objectMapper.readValue(resultSet.getString("metadata"), object : TypeReference<Map<String, Any?>>() {}),
             source = resultSet.getString("source"),
-            pageNumber = resultSet.getObject("page_number", Int::class.java),
-            chunkIndex = resultSet.getObject("chunk_index", Int::class.java),
+            pageNumber = resultSet.getObject("page_number", Int::class.javaObjectType),
+            chunkIndex = resultSet.getObject("chunk_index", Int::class.javaObjectType),
         )
 }
 
@@ -617,6 +617,40 @@ class JdbcDocumentAssetRepository(
         )
     }
 
+    fun find(assetId: String): StoredDocumentAsset? =
+        jdbcTemplate
+            .query(
+                """
+                SELECT asset_id, workspace_id, chunking_profile, doc_id, storage_key, content_hash, media_type,
+                       byte_size, original_name, relationship_id, ordinal, width, height, alt_text, caption, anchor_block_id
+                FROM $schema.document_assets
+                WHERE asset_id = ?
+                """.trimIndent(),
+                ::mapAsset,
+                assetId,
+            ).firstOrNull()
+
+    fun listForChunk(
+        workspaceId: String,
+        chunkingProfile: String,
+        chunkId: String,
+    ): List<StoredDocumentAsset> =
+        jdbcTemplate.query(
+            """
+            SELECT asset.asset_id, asset.workspace_id, asset.chunking_profile, asset.doc_id, asset.storage_key,
+                   asset.content_hash, asset.media_type, asset.byte_size, asset.original_name, asset.relationship_id,
+                   asset.ordinal, asset.width, asset.height, asset.alt_text, asset.caption, asset.anchor_block_id
+            FROM $schema.chunk_assets link
+            JOIN $schema.document_assets asset ON asset.asset_id = link.asset_id
+            WHERE link.workspace_id = ? AND link.chunking_profile = ? AND link.chunk_id = ?
+            ORDER BY link.display_order, asset.asset_id
+            """.trimIndent(),
+            ::mapAsset,
+            workspaceId,
+            chunkingProfile,
+            chunkId,
+        )
+
     fun deleteForDocument(
         workspaceId: String,
         chunkingProfile: String,
@@ -627,6 +661,29 @@ class JdbcDocumentAssetRepository(
             workspaceId,
             chunkingProfile,
             documentId,
+        )
+
+    private fun mapAsset(
+        resultSet: java.sql.ResultSet,
+        @Suppress("UNUSED_PARAMETER") rowNumber: Int,
+    ): StoredDocumentAsset =
+        StoredDocumentAsset(
+            assetId = resultSet.getString("asset_id"),
+            workspaceId = resultSet.getString("workspace_id"),
+            chunkingProfile = resultSet.getString("chunking_profile"),
+            documentId = resultSet.getString("doc_id"),
+            storageKey = resultSet.getString("storage_key"),
+            contentHash = resultSet.getString("content_hash"),
+            mediaType = resultSet.getString("media_type"),
+            byteSize = resultSet.getLong("byte_size"),
+            originalName = resultSet.getString("original_name"),
+            relationshipId = resultSet.getString("relationship_id"),
+            ordinal = resultSet.getInt("ordinal"),
+            width = resultSet.getObject("width", Int::class.javaObjectType),
+            height = resultSet.getObject("height", Int::class.javaObjectType),
+            altText = resultSet.getString("alt_text"),
+            caption = resultSet.getString("caption"),
+            anchorBlockId = resultSet.getString("anchor_block_id"),
         )
 }
 
