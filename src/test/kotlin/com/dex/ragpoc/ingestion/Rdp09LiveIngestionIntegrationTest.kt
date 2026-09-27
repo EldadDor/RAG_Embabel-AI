@@ -111,7 +111,7 @@ class Rdp09LiveIngestionIntegrationTest {
     }
 
     @Test
-    @Tag("database-only")
+    @Tag("actual-model")
     fun `ingests every loader class and persists Word asset association`() {
         val originalPdf = Path.of(requireNotNull(System.getenv("RDP09_SOURCE_PATH"))).toAbsolutePath().normalize()
         require(Files.isRegularFile(originalPdf)) { "RDP09_SOURCE_PATH is not a file: $originalPdf" }
@@ -130,13 +130,7 @@ class Rdp09LiveIngestionIntegrationTest {
         Files.copy(originalPdf, pdf, StandardCopyOption.REPLACE_EXISTING)
         Files.copy(Path.of("src/test/resources/fixtures/word-guide.docx"), word, StandardCopyOption.REPLACE_EXISTING)
         ensureWorkspace()
-        val service =
-            ingestionService(
-                EmbeddingGateway { texts ->
-                    texts.map { List(properties.database.vectorDimension) { 0.0f } }
-                },
-                properties.copy(assets = properties.assets.copy(storageRoot = Path.of("target", "rdp09-live-assets"))),
-            )
+        val service = ingestionService()
         val sources =
             listOf(
                 text to "text",
