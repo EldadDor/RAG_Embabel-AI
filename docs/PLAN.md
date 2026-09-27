@@ -2,7 +2,7 @@
 
 **Status:** revised for approval
 
-**Last reviewed:** 2026-09-22
+**Last reviewed:** 2026-09-27
 
 **Authoritative source:** `EldadDor/RAG-dev-plane` at `92a594e8e3bec694b1a893563f63d8a220605dcd`.
 
@@ -167,6 +167,16 @@ The existing Python-ingested PostgreSQL corpus may be used read-only for Kotlin 
 - Keep the default workspace untouched.
 
 **Done when:** you confirm both runtimes work safely against the same database.
+
+### RDP-16 — PPTX parsing and ingestion (later extension)
+
+- Add `.pptx` to the loader registry after the current Python parity sequence. Use Apache POI XSLF (`poi-ooxml`) as the proposed Java parser; confirm its version and dependency graph at the design gate.
+- Validate OOXML package safety and reject corrupt, encrypted, oversized, or unsafe presentations before parsing.
+- Preserve slide order and slide-number provenance. Extract slide titles, text boxes, notes when useful, and table cells in reading order, with stable block identifiers and offsets for chunking and citations.
+- Extract embedded image bytes and metadata into the existing private asset store. Link each image to its slide and nearest relevant text chunk, following the DOCX asset lifecycle. No OCR or visual understanding is included.
+- Integrate PPTX with dry run, unchanged-file detection, replacement, rollback, recursive scans, and supported-extension reporting.
+
+**Done when:** focused PPTX fixtures verify slide/text/table order, provenance, image bytes and chunk links, package safety, and ingestion lifecycle; an opt-in integration check persists a presentation and its assets. This is not an RDP-10 entry condition.
 
 ### EXP-01 — Optional Embabel experiment
 

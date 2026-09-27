@@ -2,7 +2,7 @@
 
 **Status:** proposed for approval
 
-**Last reviewed:** 2026-09-19
+**Last reviewed:** 2026-09-27
 **Source revision:** `RAG-dev-plane` `92a594e8e3bec694b1a893563f63d8a220605dcd`
 
 The Kotlin service ports the Python backend's behavior and uses its existing PostgreSQL/pgvector database as an externally managed shared store. Spring AI handles model-provider calls. Application-owned JDBC repositories handle every read and write to the `rag` schema.
@@ -30,6 +30,8 @@ RAG-dev-plane owns `rag.schema_migrations` and the five applied migration versio
 `rag.document_chunks` is not a generic Spring AI collection. Its primary key is Python UUIDv5 derived from the stable chunk ID; its JSONB metadata controls workspace/profile scope and carries provenance, assets, and code metadata. Queries use pgvector cosine distance and PostgreSQL full-text search, with application-side RRF. The Kotlin JDBC repository is therefore the interoperability boundary.
 
 DOCX handling is a parser boundary completed before ingestion. It uses docx4j with a JDK 25-compatible JAXB runtime to produce ordered text blocks and extracted image metadata/bytes. Ingestion consumes that parsed result and persists assets and chunk links only after parsing fixtures pass.
+
+PPTX is a later RDP-16 extension, outside the Python parity sequence and not a prerequisite for RDP-10. The proposed loader uses Apache POI XSLF to preserve slide order, text/table structure, and slide provenance; extracted images use the same private asset and chunk-link model as DOCX. Package safety and dependency compatibility are checked before implementation.
 
 Document loading also preserves source-file language for code and configuration files. The chunking layer uses recursive text splitting with an 800-character size and 120-character overlap by default, with named profiles for alternate recursive settings. Bundled Tree-sitter grammars extract Python, Java, and Kotlin declarations and line ranges; malformed Java/Kotlin falls back to generic splitting. Chunk IDs include the document ID, profile name when nondefault, and chunk index. Persistence wiring remains part of RDP-09.
 

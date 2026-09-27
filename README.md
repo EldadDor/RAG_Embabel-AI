@@ -1,6 +1,14 @@
 # RAG_Embabel-AI
 
-Agentic RAG proof-of-concept using **Spring AI + Embabel**, mirroring a Python LangChain/Chroma pipeline.
+Kotlin/Spring Boot service being built for backend parity with RAG-dev-plane. Document loading, chunking, private assets, JDBC interoperability, and an ingestion service are implemented. HTTP parity endpoints are still planned.
+
+## Current local run
+
+Use the `local` Spring profile, which is also the default in `application.yml`. Supply the environment variables needed by your local PostgreSQL and model services, then run `rtk proxy mvn spring-boot:run` with the workspace Maven environment described in [the repository instructions](.codex/AGENTS.md). The HTTP port defaults to `8000` (`API_PORT`). Check `http://localhost:8000/actuator/health`.
+
+`local,legacy-poc` does not expose `POST /api/ingest`: the old PDF controller requires both `legacy-poc` and `vector-store-poc`. The RDP-09 ingestion service currently has no HTTP controller. Adding `vector-store-poc` selects the obsolete Spring AI `VectorStore` path, which has no active store bean in the current configuration. The old `/api/rag/query` routes have the same profile restriction. PPTX support is planned as a later task, RDP-16.
+
+The historical proof-of-concept instructions below are retained for reference and do not describe the current runtime.
 
 ## Stack
 
