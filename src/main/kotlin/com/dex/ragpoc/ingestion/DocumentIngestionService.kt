@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import kotlin.math.abs
 
 fun interface EmbeddingGateway {
     fun embed(texts: List<String>): List<List<Float>>
@@ -167,7 +168,7 @@ class DocumentIngestionService(
             )
         }
         storedAssets.forEach { (asset, stored) ->
-            val assetId = "${document.documentId}:${asset.ordinal}:${asset.contentHash}"
+            val assetId = assetId(request, document, asset)
             assets.upsert(
                 StoredDocumentAsset(
                     assetId,
@@ -188,23 +189,42 @@ class DocumentIngestionService(
                     asset.blockId,
                 ),
             )
-            preparedChunks.forEach { chunk ->
-                val start = chunk.metadata["start_index"] as? Int
-                val end = chunk.metadata["end_index"] as? Int
-                val matchesAnchor =
-                    asset.sourceIndex != null && start != null && end != null &&
-                        asset.sourceIndex >= start && asset.sourceIndex < end
-                if (matchesAnchor || preparedChunks.size == 1) {
-                    assets.linkToChunk(
-                        request.workspaceId,
-                        request.chunkingProfile,
-                        document.documentId,
-                        chunk.chunkId,
-                        assetId,
-                        asset.ordinal,
-                    )
-                }
+            relatedChunk(asset, preparedChunks)?.let { chunk ->
+                assets.linkToChunk(
+                    request.workspaceId,
+                    request.chunkingProfile,
+                    document.documentId,
+                    chunk.chunkId,
+                    assetId,
+                    asset.ordinal,
+                )
             }
+        }
+    }
+
+    /** Mirrors Python's cross-runtime asset identity and nearest-chunk association. */
+    private fun assetId(
+        request: IngestionRequest,
+        document: Document,
+        asset: com.dex.ragpoc.domain.DocumentAsset,
+    ): String =
+        sha256(
+            "${request.workspaceId}:${request.chunkingProfile}:${document.documentId}:${asset.anchorId}"
+                .toByteArray(StandardCharsets.UTF_8),
+        )
+
+    private fun relatedChunk(
+        asset: com.dex.ragpoc.domain.DocumentAsset,
+        preparedChunks: List<Chunk>,
+    ): Chunk? {
+        if (preparedChunks.isEmpty()) return null
+        val sourceIndex = asset.sourceIndex ?: 0
+        return preparedChunks.firstOrNull { chunk ->
+            val start = chunk.metadata["start_index"] as? Int
+            val end = chunk.metadata["end_index"] as? Int
+            start != null && end != null && sourceIndex in start..end
+        } ?: preparedChunks.minByOrNull { chunk ->
+            abs((chunk.metadata["start_index"] as? Int ?: 0) - sourceIndex)
         }
     }
 }

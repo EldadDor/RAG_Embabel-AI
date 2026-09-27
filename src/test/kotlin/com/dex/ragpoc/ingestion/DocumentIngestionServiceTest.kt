@@ -2,8 +2,10 @@ package com.dex.ragpoc.ingestion
 
 import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.domain.Document
+import com.dex.ragpoc.domain.DocumentAsset
 import com.dex.ragpoc.domain.SourceDocument
 import com.dex.ragpoc.domain.SourceType
+import com.dex.ragpoc.parsing.ChunkingProfile
 import com.dex.ragpoc.parsing.DocumentChunker
 import com.dex.ragpoc.parsing.DocumentLoader
 import com.dex.ragpoc.parsing.DocumentLoaderRegistry
@@ -11,6 +13,7 @@ import com.dex.ragpoc.persistence.JdbcChunkRepository
 import com.dex.ragpoc.persistence.JdbcDocumentAssetRepository
 import com.dex.ragpoc.persistence.JdbcSourceDocumentRepository
 import com.dex.ragpoc.persistence.StoredChunk
+import com.dex.ragpoc.persistence.StoredDocumentAsset
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -207,7 +210,9 @@ class DocumentIngestionServiceTest {
         val chunks = mockk<JdbcChunkRepository>(relaxed = true)
         val assets = mockk<JdbcDocumentAssetRepository>(relaxed = true)
         val linkedChunk = slot<String>()
+        val storedAsset = slot<StoredDocumentAsset>()
         every { assets.linkToChunk(any(), any(), any(), capture(linkedChunk), any(), any()) } returns Unit
+        every { assets.upsert(capture(storedAsset)) } returns Unit
         val properties = AppProperties(database = AppProperties.Database(vectorDimension = 3))
         val service =
             DocumentIngestionService(
@@ -231,6 +236,61 @@ class DocumentIngestionServiceTest {
         verify(exactly = 1) { assets.upsert(any()) }
         verify(atLeast = 1) { assets.linkToChunk("workspace", "default", result.documentId, any(), any(), any()) }
         assertTrue(linkedChunk.captured.startsWith(result.documentId))
+        assertEquals(hash("workspace:default:${result.documentId}:image-0000"), storedAsset.captured.assetId)
+    }
+
+    @Test
+    fun `asset outside chunk bounds links to the nearest chunk`() {
+        val source = temporaryDirectory.resolve("guide.txt")
+        Files.writeString(source, "alpha beta gamma delta epsilon zeta")
+        val assetContent = "image".toByteArray()
+        val document =
+            Document(
+                documentId = "guide",
+                sourcePath = source.toString(),
+                sourceType = SourceType.TEXT,
+                content = Files.readString(source),
+                assets =
+                    listOf(
+                        DocumentAsset(
+                            anchorId = "asset-1",
+                            relationshipId = "rId1",
+                            content = assetContent,
+                            contentHash = hash("image"),
+                            mediaType = "image/png",
+                            sourceIndex = 10_000,
+                        ),
+                    ),
+            )
+        val sourceDocuments = mockk<JdbcSourceDocumentRepository>(relaxed = true)
+        every { sourceDocuments.find("workspace", "default", "guide") } returns null
+        val storedChunks = mutableListOf<StoredChunk>()
+        val chunks = mockk<JdbcChunkRepository>(relaxed = true)
+        every { chunks.upsert(capture(storedChunks), any()) } returns Unit
+        val assets = mockk<JdbcDocumentAssetRepository>(relaxed = true)
+        val linkedChunk = slot<String>()
+        every { assets.linkToChunk(any(), any(), any(), capture(linkedChunk), any(), any()) } returns Unit
+        val properties = AppProperties(database = AppProperties.Database(vectorDimension = 3))
+        val service =
+            DocumentIngestionService(
+                DocumentLoaderRegistry(mapOf(".txt" to DocumentLoader { document })),
+                DocumentChunker(mapOf("default" to ChunkingProfile(chunkSize = 12, chunkOverlap = 1))),
+                EmbeddingGateway { texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
+                ContentAddressedAssetStore(
+                    properties.copy(assets = AppProperties.Assets(storageRoot = temporaryDirectory.resolve("assets"))),
+                ),
+                sourceDocuments,
+                chunks,
+                assets,
+                properties,
+                transactionTemplate(),
+            )
+
+        service.ingest(IngestionRequest("workspace", source))
+
+        assertTrue(storedChunks.size > 1)
+        assertEquals(storedChunks.maxBy { it.chunkIndex ?: -1 }.metadata["chunk_id"], linkedChunk.captured)
+        verify(exactly = 1) { assets.linkToChunk("workspace", "default", "guide", any(), any(), any()) }
     }
 
     @Test
