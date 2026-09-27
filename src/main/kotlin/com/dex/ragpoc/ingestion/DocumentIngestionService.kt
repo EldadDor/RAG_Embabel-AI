@@ -153,7 +153,12 @@ class DocumentIngestionService(
                     content = chunk.text,
                     metadata =
                         chunk.metadata +
-                            mapOf("workspace_id" to request.workspaceId, "document_id" to document.documentId, "chunk_id" to chunk.chunkId),
+                            mapOf(
+                                "workspace_id" to request.workspaceId,
+                                "chunking_profile" to request.chunkingProfile,
+                                "document_id" to document.documentId,
+                                "chunk_id" to chunk.chunkId,
+                            ),
                     source = chunk.sourcePath,
                     pageNumber = chunk.page,
                     chunkIndex = chunk.chunkIndex,

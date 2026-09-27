@@ -66,6 +66,12 @@ On `phase-sync`, touch no source files:
 - If unsure of today's date, ask; never guess a `Last reviewed` stamp.
 - Format with `mvn spotless:apply` before committing.
 
+## Session bootstrap
+- This file is the first repository instruction to read; the root `AGENTS.md` routes here.
+- For Maven or Spotless, set `JAVA_TOOL_OPTIONS=-Duser.home=<workspace>\\target\\codex-home`, `XDG_CONFIG_HOME=<workspace>\\target\\codex-home\\.config`, and `MAVEN_ARGS=-Dmaven.repo.local=<workspace>\\.m2`. This keeps Maven and JGit inside the workspace, without changing the machine-wide Maven cache or user configuration.
+- Use `rtk proxy mvn ...` when Maven needs `-D` options; pass those options through `MAVEN_ARGS`, because RTK may rewrite direct `-D` arguments.
+- Before a fresh session, the user may run `scripts\\Start-CodexSession.ps1` to create the local paths and warm the cache with `mvn install -DskipTests=true`. It installs no hook and changes no persistent environment setting.
+
 ## Stack
 Kotlin 2.3.21 · Spring Boot 4.1.x · Spring AI 2.0.1 · Embabel 1.5.2 · JDK 25 ·
 Maven · JUnit 5 + Mockito

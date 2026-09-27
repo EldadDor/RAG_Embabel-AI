@@ -10,10 +10,16 @@ import com.dex.ragpoc.parsing.DocumentLoaderRegistry
 import com.dex.ragpoc.persistence.JdbcChunkRepository
 import com.dex.ragpoc.persistence.JdbcDocumentAssetRepository
 import com.dex.ragpoc.persistence.JdbcSourceDocumentRepository
+import com.dex.ragpoc.persistence.StoredChunk
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.PDPage
+import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.font.PDType1Font
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.transaction.TransactionStatus
@@ -261,6 +267,57 @@ class DocumentIngestionServiceTest {
         }
         verify(exactly = sources.size) { sourceDocuments.upsert(any()) }
         verify(atLeast = sources.size) { chunks.upsert(any(), any()) }
+    }
+
+    @Test
+    fun `PDF ingestion persists page provenance and chunks`() {
+        val source = temporaryDirectory.resolve("guide.pdf")
+        writePdf(source)
+        val sourceDocuments = mockk<JdbcSourceDocumentRepository>(relaxed = true)
+        every { sourceDocuments.find("workspace", "default", any()) } returns null
+        val chunks = mockk<JdbcChunkRepository>(relaxed = true)
+        val storedDocument = slot<SourceDocument>()
+        val storedChunk = slot<StoredChunk>()
+        every { sourceDocuments.upsert(capture(storedDocument)) } returns Unit
+        every { chunks.upsert(capture(storedChunk), any()) } returns Unit
+        val properties = AppProperties(database = AppProperties.Database(vectorDimension = 3))
+        val service =
+            DocumentIngestionService(
+                DocumentLoaderRegistry(),
+                DocumentChunker(),
+                EmbeddingGateway { texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
+                ContentAddressedAssetStore(properties),
+                sourceDocuments,
+                chunks,
+                mockk(relaxed = true),
+                properties,
+                transactionTemplate(),
+            )
+
+        val result = service.ingest(IngestionRequest("workspace", source))
+
+        assertTrue(result.changed)
+        assertTrue(result.chunkCount > 0)
+        assertEquals(SourceType.PDF, storedDocument.captured.sourceType)
+        assertEquals(2, storedDocument.captured.metadata["total_pages"])
+        assertTrue(storedChunk.captured.content.contains("[PAGE 1]"))
+        assertEquals("default", storedChunk.captured.metadata["chunking_profile"])
+    }
+
+    private fun writePdf(path: Path) {
+        PDDocument().use { document ->
+            repeat(2) { pageIndex ->
+                document.addPage(PDPage())
+                PDPageContentStream(document, document.getPage(pageIndex)).use { stream ->
+                    stream.beginText()
+                    stream.setFont(PDType1Font(Standard14Fonts.FontName.HELVETICA), 12f)
+                    stream.newLineAtOffset(72f, 720f)
+                    stream.showText("PDF page ${pageIndex + 1}")
+                    stream.endText()
+                }
+            }
+            document.save(path.toFile())
+        }
     }
 
     private fun hash(content: String): String =
