@@ -2,7 +2,12 @@
 
 **Last reviewed:** 2026-09-27
 
-**RDP-10 status:** In progress — G3 approved; committing and pushing.
+**RDP-10 status:** Awaiting G4 phase-close approval.
+
+**Latest RDP-10 evidence:** Commit `3093b46` adds the approved identity,
+workspace, session, asset, and safe-error API layers. Focused RDP-10 tests
+passed 8 tests; the full suite passed 55 tests with 0 failures/errors and 6
+existing skips. No live services were run.
 
 ## Current phase tasks
 
