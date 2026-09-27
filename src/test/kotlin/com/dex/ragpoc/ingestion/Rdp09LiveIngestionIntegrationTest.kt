@@ -13,6 +13,7 @@ import com.dex.ragpoc.persistence.JdbcDocumentAssetRepository
 import com.dex.ragpoc.persistence.JdbcSourceDocumentRepository
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.ai.embedding.EmbeddingModel
@@ -110,6 +111,75 @@ class Rdp09LiveIngestionIntegrationTest {
     }
 
     @Test
+    @Tag("database-only")
+    fun `ingests every loader class and persists Word asset association`() {
+        val originalPdf = Path.of(requireNotNull(System.getenv("RDP09_SOURCE_PATH"))).toAbsolutePath().normalize()
+        require(Files.isRegularFile(originalPdf)) { "RDP09_SOURCE_PATH is not a file: $originalPdf" }
+        val root = Path.of("target", "rdp09-live-formats").toAbsolutePath().normalize()
+        val text = root.resolve("guide.txt")
+        val markdown = root.resolve("guide.md")
+        val html = root.resolve("guide.html")
+        val code = root.resolve("Guide.kt")
+        val pdf = root.resolve("research_bikes.pdf")
+        val word = root.resolve("word-guide.docx")
+        Files.createDirectories(root)
+        Files.writeString(text, "Plain-text ingestion guide.")
+        Files.writeString(markdown, "# Markdown guide\n\nStructured ingestion content.")
+        Files.writeString(html, "<html><body><h1>HTML guide</h1><p>Visible content.</p></body></html>")
+        Files.writeString(code, "class Guide { fun describe() = \"Code ingestion\" }")
+        Files.copy(originalPdf, pdf, StandardCopyOption.REPLACE_EXISTING)
+        Files.copy(Path.of("src/test/resources/fixtures/word-guide.docx"), word, StandardCopyOption.REPLACE_EXISTING)
+        ensureWorkspace()
+        val service =
+            ingestionService(
+                EmbeddingGateway { texts ->
+                    texts.map { List(properties.database.vectorDimension) { 0.0f } }
+                },
+                properties.copy(assets = properties.assets.copy(storageRoot = Path.of("target", "rdp09-live-assets"))),
+            )
+        val sources =
+            listOf(
+                text to "text",
+                markdown to "markdown",
+                html to "html",
+                code to "code",
+                pdf to "pdf",
+                word to "word",
+            )
+
+        val results =
+            sources.map { (source, expectedType) ->
+                val result = service.ingest(IngestionRequest(WORKSPACE_ID, source, root, CHUNKING_PROFILE))
+                val stored = sourceDocuments.find(WORKSPACE_ID, CHUNKING_PROFILE, result.documentId)
+                assertEquals(expectedType, stored?.sourceType?.name?.lowercase())
+                assertTrue(storedChunkCount(result.documentId) > 0)
+                result
+            }
+        val wordDocumentId = results.last().documentId
+        val assetLinkCount =
+            requireNotNull(
+                jdbcTemplate.queryForObject(
+                    """
+                    SELECT count(*)
+                    FROM rag.chunk_assets link
+                    JOIN rag.document_assets asset ON asset.asset_id = link.asset_id
+                    WHERE link.workspace_id = ?
+                      AND link.chunking_profile = ?
+                      AND link.doc_id = ?
+                      AND asset.doc_id = ?
+                    """.trimIndent(),
+                    Int::class.java,
+                    WORKSPACE_ID,
+                    CHUNKING_PROFILE,
+                    wordDocumentId,
+                    wordDocumentId,
+                ),
+            )
+
+        assertTrue(assetLinkCount > 0)
+    }
+
+    @Test
     fun `rolls back real source and chunk writes when asset persistence fails`() {
         val root = Path.of("target", "rdp09-live-rollback").toAbsolutePath().normalize()
         val source = root.resolve("rollback.txt")
@@ -161,21 +231,7 @@ class Rdp09LiveIngestionIntegrationTest {
             service.ingest(IngestionRequest(WORKSPACE_ID, source, root, CHUNKING_PROFILE))
         }
 
-        val persistedChunkCount =
-            requireNotNull(
-                jdbcTemplate.queryForObject(
-                    """
-                    SELECT count(*) FROM rag.${properties.database.chunkTable}
-                    WHERE metadata ->> 'workspace_id' = ?
-                      AND metadata ->> 'chunking_profile' = ?
-                      AND metadata ->> 'document_id' = ?
-                    """.trimIndent(),
-                    Int::class.java,
-                    WORKSPACE_ID,
-                    CHUNKING_PROFILE,
-                    documentId,
-                ),
-            )
+        val persistedChunkCount = storedChunkCount(documentId)
         assertEquals(null, sourceDocuments.find(WORKSPACE_ID, CHUNKING_PROFILE, documentId))
         assertEquals(0, persistedChunkCount)
     }
@@ -188,17 +244,35 @@ class Rdp09LiveIngestionIntegrationTest {
         )
     }
 
-    private fun ingestionService() =
-        DocumentIngestionService(
-            DocumentLoaderRegistry(),
-            DocumentChunker(),
-            EmbeddingGateway { texts -> texts.map { embeddingModel.embed(it).toList() } },
-            ContentAddressedAssetStore(properties),
-            sourceDocuments,
-            chunks,
-            assets,
-            properties,
-            transactions,
+    private fun ingestionService(
+        embeddingGateway: EmbeddingGateway = EmbeddingGateway { texts -> texts.map { embeddingModel.embed(it).toList() } },
+        assetProperties: AppProperties = properties,
+    ) = DocumentIngestionService(
+        DocumentLoaderRegistry(),
+        DocumentChunker(),
+        embeddingGateway,
+        ContentAddressedAssetStore(assetProperties),
+        sourceDocuments,
+        chunks,
+        assets,
+        assetProperties,
+        transactions,
+    )
+
+    private fun storedChunkCount(documentId: String): Int =
+        requireNotNull(
+            jdbcTemplate.queryForObject(
+                """
+                SELECT count(*) FROM rag.${properties.database.chunkTable}
+                WHERE metadata ->> 'workspace_id' = ?
+                  AND metadata ->> 'chunking_profile' = ?
+                  AND metadata ->> 'document_id' = ?
+                """.trimIndent(),
+                Int::class.java,
+                WORKSPACE_ID,
+                CHUNKING_PROFILE,
+                documentId,
+            ),
         )
 
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
