@@ -448,6 +448,24 @@ class JdbcSourceDocumentRepository(
         )
     }
 
+    fun listForRoot(
+        workspaceId: String,
+        chunkingProfile: String,
+        rootPath: String,
+    ): List<SourceDocument> =
+        jdbcTemplate.query(
+            """
+            SELECT workspace_id, chunking_profile, doc_id, root_path, source_path, source_type, content_hash, metadata
+            FROM $schema.source_documents
+            WHERE workspace_id = ? AND chunking_profile = ? AND root_path = ?
+            ORDER BY source_path, doc_id
+            """.trimIndent(),
+            ::mapSourceDocument,
+            workspaceId,
+            chunkingProfile,
+            rootPath,
+        )
+
     fun delete(
         workspaceId: String,
         chunkingProfile: String,
@@ -530,8 +548,17 @@ class JdbcChunkRepository(
 
     fun delete(id: UUID): Boolean = jdbcTemplate.update("DELETE FROM $schema.$chunkTable WHERE id = ?", id) == 1
 
-    fun deleteForDocument(documentId: String): Int =
-        jdbcTemplate.update("DELETE FROM $schema.$chunkTable WHERE metadata ->> 'document_id' = ?", documentId)
+    fun deleteForDocument(
+        workspaceId: String,
+        chunkingProfile: String,
+        documentId: String,
+    ): Int =
+        jdbcTemplate.update(
+            "DELETE FROM $schema.$chunkTable WHERE metadata ->> 'workspace_id' = ? AND metadata ->> 'chunking_profile' = ? AND metadata ->> 'document_id' = ?",
+            workspaceId,
+            chunkingProfile,
+            documentId,
+        )
 
     private fun mapChunk(
         resultSet: java.sql.ResultSet,

@@ -302,7 +302,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <useManifestOnlyJar>false</useManifestOnlyJar>
-                    <argLine>-Djava.io.tmpdir=${project.build.directory}</argLine>
+                    <argLine>-Djava.io.tmpdir=${project.build.directory} -Duser.home=${project.build.directory}/home</argLine>
                 </configuration>
             </plugin>
             <plugin>
