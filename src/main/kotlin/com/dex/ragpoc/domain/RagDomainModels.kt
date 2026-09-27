@@ -1,5 +1,7 @@
 package com.dex.ragpoc.domain
 
+import java.time.Instant
+
 enum class SourceType {
     MARKDOWN,
     HTML,
@@ -93,6 +95,7 @@ data class ChatSession(
     val title: String,
     val lastPreview: String? = null,
     val archived: Boolean = false,
+    val updatedAt: Instant? = null,
 )
 
 data class ConversationTurn(
@@ -100,6 +103,7 @@ data class ConversationTurn(
     val sessionId: String,
     val role: String,
     val content: String,
+    val createdAt: Instant? = null,
 )
 
 data class ConversationSummary(

@@ -53,6 +53,12 @@ class ContentAddressedAssetStore(
         return StoredAsset(key, target)
     }
 
+    fun read(storageKey: String): ByteArray {
+        val target = resolve(storageKey)
+        require(Files.isRegularFile(target)) { "Asset is not available" }
+        return Files.readAllBytes(target)
+    }
+
     private fun resolve(key: String): Path {
         val path = root.resolve(key).normalize()
         require(path.startsWith(root)) { "Asset path escapes the configured storage root" }

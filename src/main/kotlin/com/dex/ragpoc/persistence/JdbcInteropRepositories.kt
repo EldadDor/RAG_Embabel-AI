@@ -233,7 +233,7 @@ class JdbcConversationRepository(
     ): List<ChatSession> =
         jdbcTemplate.query(
             """
-            SELECT session_id, owner_id, workspace_id, title, last_preview, archived
+            SELECT session_id, owner_id, workspace_id, title, last_preview, archived, updated_at
             FROM $schema.chat_sessions
             WHERE owner_id = ? AND workspace_id = ? AND archived = false
             ORDER BY updated_at DESC, session_id DESC
@@ -250,7 +250,7 @@ class JdbcConversationRepository(
         jdbcTemplate
             .query(
                 """
-                SELECT session_id, owner_id, workspace_id, title, last_preview, archived
+                SELECT session_id, owner_id, workspace_id, title, last_preview, archived, updated_at
                 FROM $schema.chat_sessions
                 WHERE session_id = ? AND owner_id = ? AND archived = false
                 """.trimIndent(),
@@ -334,7 +334,7 @@ class JdbcConversationRepository(
         return jdbcTemplate
             .query(
                 """
-                SELECT id, session_id, role, content
+                SELECT id, session_id, role, content, created_at
                 FROM $schema.conversation_turns
                 WHERE session_id = ?
                 ORDER BY id DESC
@@ -346,11 +346,20 @@ class JdbcConversationRepository(
                         sessionId = resultSet.getString("session_id"),
                         role = resultSet.getString("role"),
                         content = resultSet.getString("content"),
+                        createdAt = resultSet.getTimestamp("created_at").toInstant(),
                     )
                 },
                 sessionId,
                 limit,
             ).asReversed()
+    }
+
+    fun deleteTurnsOlderThan(retentionDays: Int): Int {
+        require(retentionDays > 0) { "Conversation retention must be positive" }
+        return jdbcTemplate.update(
+            "DELETE FROM $schema.conversation_turns WHERE created_at < now() - (? * INTERVAL '1 day')",
+            retentionDays,
+        )
     }
 
     fun summary(sessionId: String): ConversationSummary? =
@@ -393,6 +402,7 @@ class JdbcConversationRepository(
             title = resultSet.getString("title"),
             lastPreview = resultSet.getString("last_preview"),
             archived = resultSet.getBoolean("archived"),
+            updatedAt = resultSet.getTimestamp("updated_at").toInstant(),
         )
 }
 
@@ -657,6 +667,23 @@ class JdbcDocumentAssetRepository(
                 WHERE asset_id = ?
                 """.trimIndent(),
                 ::mapAsset,
+                assetId,
+            ).firstOrNull()
+
+    fun findForWorkspace(
+        workspaceId: String,
+        assetId: String,
+    ): StoredDocumentAsset? =
+        jdbcTemplate
+            .query(
+                """
+                SELECT asset_id, workspace_id, chunking_profile, doc_id, storage_key, content_hash, media_type,
+                       byte_size, original_name, relationship_id, ordinal, width, height, alt_text, caption, anchor_block_id
+                FROM $schema.document_assets
+                WHERE workspace_id = ? AND asset_id = ?
+                """.trimIndent(),
+                ::mapAsset,
+                workspaceId,
                 assetId,
             ).firstOrNull()
 
