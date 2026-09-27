@@ -2,6 +2,8 @@
 
 **Last reviewed:** 2026-09-27
 
+**RDP-09 status:** Completed 2026-09-27 (G4 approved). No carry-over items.
+
 **Latest RDP-09 evidence:** The opt-in `actual-model` loader-parity test passed on
 2026-09-27: 1 test, 0 failures/errors, 11.80 seconds. It ingested text,
 Markdown, HTML, code, PDF, and Word through the restored 1024-dimensional

@@ -2,6 +2,8 @@
 
 **Last reviewed:** 2026-09-26
 
+| Asset lifecycle and ingestion (RDP-09) | Completed 2026-09-27 | Python-compatible asset identity/linking, dry-run/unchanged/rollback/recursive-cleanup coverage, real database persistence, and actual-model ingestion for text, Markdown, HTML, code, PDF, and Word all passed. Carry-over: none. |
+
 | Phase | Status | Evidence |
 | --- | --- | --- |
 | Planning and contract intake (DOC-01) | Completed 2026-09-18 | [Current phase record](work_current_phase.md); [delivery plan](PLAN.md); [architecture](architecture.md). Source artifacts remain an SVC-01 entry gate. |
