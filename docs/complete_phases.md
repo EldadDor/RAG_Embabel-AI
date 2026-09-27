@@ -2,6 +2,8 @@
 
 **Last reviewed:** 2026-09-26
 
+| Identity, sessions, API errors, and assets (RDP-10) | Completed 2026-09-27 | Added principal resolution, workspace authorization, masked session lifecycle, bounded durable-memory cleanup, protected asset reads with image validation/ETags, and safe error envelopes. Focused tests passed 8 tests; full `mvn test` passed 55 tests with 0 failures/errors and 6 existing skips. Carry-over: RDP-11 through RDP-16 and EXP-01. |
+
 | Asset lifecycle and ingestion (RDP-09) | Completed 2026-09-27 | Python-compatible asset identity/linking, dry-run/unchanged/rollback/recursive-cleanup coverage, real database persistence, and actual-model ingestion for text, Markdown, HTML, code, PDF, and Word all passed. Carry-over: none. |
 
 | Phase | Status | Evidence |
