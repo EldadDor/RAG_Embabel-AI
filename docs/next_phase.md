@@ -4,7 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-09 | Asset lifecycle and ingestion | RDP-05, RDP-06, RDP-07, and RDP-08 | Ingestion starts only after DOCX parsing passes; atomic replacement, dry run, cleanup, all loaders, and assets match Python. |
 | RDP-10 | Identity, sessions, API errors, and assets | RDP-05 | Authorization/session/asset behavior matches Python. |
 | RDP-11 | Providers, profiles, and embedding cache | RDP-05 | Provider/profile/cache behavior matches Python with no schema creation. |
 | RDP-12 | Retrieval, grounded chat, and memory | RDP-10 and RDP-11 | Retrieval/chat/evaluation fixtures match Python. |

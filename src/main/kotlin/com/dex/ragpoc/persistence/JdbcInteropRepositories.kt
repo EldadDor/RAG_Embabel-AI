@@ -530,6 +530,9 @@ class JdbcChunkRepository(
 
     fun delete(id: UUID): Boolean = jdbcTemplate.update("DELETE FROM $schema.$chunkTable WHERE id = ?", id) == 1
 
+    fun deleteForDocument(documentId: String): Int =
+        jdbcTemplate.update("DELETE FROM $schema.$chunkTable WHERE metadata ->> 'document_id' = ?", documentId)
+
     private fun mapChunk(
         resultSet: java.sql.ResultSet,
         @Suppress("UNUSED_PARAMETER") rowNumber: Int,
