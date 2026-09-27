@@ -4,7 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-10 | Identity, sessions, API errors, and assets | RDP-05 | Authorization/session/asset behavior matches Python. |
 | RDP-11 | Providers, profiles, and embedding cache | RDP-05 | Provider/profile/cache behavior matches Python with no schema creation. |
 | RDP-12 | Retrieval, grounded chat, and memory | RDP-10 and RDP-11 | Retrieval/chat/evaluation fixtures match Python. |
 | RDP-13 | Streaming and telemetry instrumentation | RDP-03 and RDP-12 | Streaming behavior and full local metrics/tracing coverage pass. |
