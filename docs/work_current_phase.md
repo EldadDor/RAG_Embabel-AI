@@ -2,7 +2,7 @@
 
 **Last reviewed:** 2026-09-28
 
-**RDP-11 status:** In progress; G2 approved 2026-09-28.
+**RDP-11 status:** In progress; G2 approved 2026-09-28. Offline profile-aware embedding/cache wiring and three focused unit tests are checkpointed; provider selection and profile warming remain.
 
 **Latest RDP-10 evidence:** Commit `3093b46` adds the approved identity,
 workspace, session, asset, and safe-error API layers. Focused RDP-10 tests

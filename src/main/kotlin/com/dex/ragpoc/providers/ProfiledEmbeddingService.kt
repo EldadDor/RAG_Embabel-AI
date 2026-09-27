@@ -7,7 +7,9 @@ import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.stereotype.Service
 import java.security.MessageDigest
 
-class ModelProfileUnavailable(message: String) : IllegalArgumentException(message)
+class ModelProfileUnavailable(
+    message: String,
+) : IllegalArgumentException(message)
 
 @Service
 class ProfiledEmbeddingService(
@@ -15,9 +17,15 @@ class ProfiledEmbeddingService(
     private val cache: JdbcEmbeddingCacheRepository,
     private val embeddingModel: EmbeddingModel,
 ) {
-    fun query(profileName: String, text: String): List<Float> = embed(resolveReady(profileName), text, "query")
+    fun query(
+        profileName: String,
+        text: String,
+    ): List<Float> = embed(resolveReady(profileName), text, "query")
 
-    fun document(profileName: String, text: String): List<Float> = embed(resolveReady(profileName), text, "document")
+    fun document(
+        profileName: String,
+        text: String,
+    ): List<Float> = embed(resolveReady(profileName), text, "document")
 
     fun resolveReady(profileName: String): ModelProfile {
         val profile = profiles.get(profileName) ?: throw ModelProfileUnavailable("Unknown model profile: $profileName")
@@ -29,7 +37,11 @@ class ProfiledEmbeddingService(
         return profile
     }
 
-    private fun embed(profile: ModelProfile, text: String, purpose: String): List<Float> {
+    private fun embed(
+        profile: ModelProfile,
+        text: String,
+        purpose: String,
+    ): List<Float> {
         val effective = (if (purpose == "query") profile.queryPrefix else profile.documentPrefix) + text
         val key = cacheKey(profile, effective, purpose)
         cache.get(key, profile.dimensions)?.let { return it }
@@ -39,7 +51,11 @@ class ProfiledEmbeddingService(
         return embedding
     }
 
-    private fun cacheKey(profile: ModelProfile, text: String, purpose: String): String {
+    private fun cacheKey(
+        profile: ModelProfile,
+        text: String,
+        purpose: String,
+    ): String {
         val normalized = text.trim().split(Regex("\\s+")).joinToString(" ")
         val material = "${profile.provider}\u0000${profile.model}\u0000${profile.dimensions}\u0000$purpose\u0000$normalized"
         return MessageDigest.getInstance("SHA-256").digest(material.toByteArray()).joinToString("") { "%02x".format(it) }
