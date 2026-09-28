@@ -4,6 +4,8 @@
 
 **RDP-11 status:** Completed. Offline provider-neutral chat/embedding gateways, profile compatibility checks, cache control, no-rechunk profile warming, and work-only Microsoft Foundry configuration pass the full offline suite. Azure activation remains intentionally untested until the user runs the `work` profile at their workplace.
 
+**RDP-11 closure:** G4 approved 2026-09-28. Completion evidence is `a5a3463`, `7f8450e`, `5c25ee0`, and `86415d6`; carry-over is RDP-12 through RDP-16 and EXP-01, sequenced in `docs/next_phase.md`.
+
 **Latest RDP-10 evidence:** Commit `3093b46` adds the approved identity,
 workspace, session, asset, and safe-error API layers. Focused RDP-10 tests
 passed 8 tests; the full suite passed 55 tests with 0 failures/errors and 6

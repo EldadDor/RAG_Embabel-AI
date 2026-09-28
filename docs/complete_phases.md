@@ -1,8 +1,10 @@
 # Completed phases
 
-**Last reviewed:** 2026-09-26
+**Last reviewed:** 2026-09-28
 
 | Identity, sessions, API errors, and assets (RDP-10) | Completed 2026-09-27 | Added principal resolution, workspace authorization, masked session lifecycle, bounded durable-memory cleanup, protected asset reads with image validation/ETags, and safe error envelopes. Focused tests passed 8 tests; full `mvn test` passed 55 tests with 0 failures/errors and 6 existing skips. Carry-over: RDP-11 through RDP-16 and EXP-01. |
+
+| Providers, profiles, and embedding cache (RDP-11) | Completed 2026-09-28 | Added provider-neutral Spring AI chat/embedding gateways, ready-profile compatibility and storage-target handling, vector-length validation, float32 cache compatibility, and profile warming without rechunking. Work-only Microsoft Foundry settings remain inactive unless the user runs the `work` profile. Focused provider tests passed 8 tests; full `mvn test` passed 63 tests with 0 failures/errors and 6 existing skips. Carry-over: RDP-12 retrieval, grounded chat, and memory; RDP-13 through RDP-16 and EXP-01 remain sequenced in the backlog. |
 
 | Asset lifecycle and ingestion (RDP-09) | Completed 2026-09-27 | Python-compatible asset identity/linking, dry-run/unchanged/rollback/recursive-cleanup coverage, real database persistence, and actual-model ingestion for text, Markdown, HTML, code, PDF, and Word all passed. Carry-over: none. |
 
