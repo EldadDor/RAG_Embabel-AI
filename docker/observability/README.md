@@ -6,7 +6,7 @@ Start the stack after the Kotlin service is available at `http://localhost:8080`
 docker compose -f docker/docker-compose-observability.yml up -d
 ```
 
-The service sends OTLP metrics and traces to `http://10.100.102.12:4318` by default. Prometheus scrapes `http://host.docker.internal:8000/actuator/prometheus` every 10 seconds.
+The service sends OTLP metrics and traces to `http://10.100.102.12:4318` by default. In the laptop deployment, Prometheus scrapes `http://10.100.102.11:8000/actuator/prometheus` every 10 seconds. Update that target if the workstation's LAN address changes.
 
 | Service | URL |
 | --- | --- |
