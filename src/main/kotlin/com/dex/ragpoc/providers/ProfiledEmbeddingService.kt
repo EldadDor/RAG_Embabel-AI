@@ -1,6 +1,8 @@
 package com.dex.ragpoc.providers
 
 import com.dex.ragpoc.config.AppProperties
+import com.dex.ragpoc.config.RagOperation
+import com.dex.ragpoc.config.RagTelemetry
 import com.dex.ragpoc.domain.ModelProfile
 import com.dex.ragpoc.persistence.JdbcEmbeddingCacheRepository
 import com.dex.ragpoc.persistence.JdbcModelProfileRepository
@@ -18,6 +20,7 @@ class ProfiledEmbeddingService(
     private val cache: JdbcEmbeddingCacheRepository,
     private val embeddingModel: EmbeddingModel,
     private val properties: AppProperties,
+    private val telemetry: RagTelemetry? = null,
 ) {
     fun query(
         profileName: String,
@@ -78,10 +81,18 @@ class ProfiledEmbeddingService(
         val effective = (if (purpose == "query") profile.queryPrefix else profile.documentPrefix) + text
         val key = cacheKey(profile, effective, purpose)
         if (properties.embedding.cacheEnabled) {
-            cache.get(key, profile.dimensions)?.let { return it }
+            cache.get(key, profile.dimensions)?.let {
+                telemetry?.count("rag_embedding_cache_hits_total")
+                return it
+            }
         }
-        val embedding = embeddingModel.embed(listOf(effective)).single().toList()
-        require(embedding.size == profile.dimensions) { "Embedding dimensions do not match the model profile" }
+        val embedding =
+            telemetry?.observe(RagOperation.EMBEDDING) { embeddingModel.embed(listOf(effective)).single().toList() }
+                ?: embeddingModel.embed(listOf(effective)).single().toList()
+        if (embedding.size != profile.dimensions) {
+            telemetry?.count("rag_embedding_dimension_failures_total")
+            throw IllegalArgumentException("Embedding dimensions do not match the model profile")
+        }
         if (properties.embedding.cacheEnabled) {
             cache.put(key, profile.provider, profile.model, profile.dimensions, embedding)
         }

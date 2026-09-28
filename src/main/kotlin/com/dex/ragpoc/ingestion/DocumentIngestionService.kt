@@ -1,6 +1,8 @@
 package com.dex.ragpoc.ingestion
 
 import com.dex.ragpoc.config.AppProperties
+import com.dex.ragpoc.config.RagOperation
+import com.dex.ragpoc.config.RagTelemetry
 import com.dex.ragpoc.domain.Chunk
 import com.dex.ragpoc.domain.Document
 import com.dex.ragpoc.domain.SourceDocument
@@ -55,11 +57,24 @@ class DocumentIngestionService(
     private val assets: JdbcDocumentAssetRepository,
     private val properties: AppProperties,
     private val transactions: TransactionTemplate,
+    private val telemetry: RagTelemetry? = null,
 ) {
-    fun ingest(request: IngestionRequest): IngestionResult {
-        val loaded = loaderRegistry.loadDocument(request.sourcePath)
+    fun ingest(request: IngestionRequest): IngestionResult =
+        try {
+            telemetry?.observe(RagOperation.INGESTION) { ingestPrepared(request) } ?: ingestPrepared(request)
+        } catch (error: RuntimeException) {
+            telemetry?.count("rag_ingestion_failures_total")
+            throw error
+        }
+
+    private fun ingestPrepared(request: IngestionRequest): IngestionResult {
+        val loaded =
+            telemetry?.observe(RagOperation.LOADER) { loaderRegistry.loadDocument(request.sourcePath) }
+                ?: loaderRegistry.loadDocument(request.sourcePath)
         val document = loaded.copy(contentHash = loaded.contentHash ?: sha256(Files.readAllBytes(request.sourcePath)))
-        val preparedChunks = chunker.chunk(document, request.chunkingProfile)
+        val preparedChunks =
+            telemetry?.observe(RagOperation.CHUNKER) { chunker.chunk(document, request.chunkingProfile) }
+                ?: chunker.chunk(document, request.chunkingProfile)
         assetStore.validate(document.assets)
         if (request.dryRun) {
             return IngestionResult(
@@ -72,6 +87,7 @@ class DocumentIngestionService(
         }
         val existing = sourceDocuments.find(request.workspaceId, request.chunkingProfile, document.documentId)
         if (existing?.contentHash == document.contentHash) {
+            telemetry?.count("rag_ingestion_skips_total")
             return IngestionResult(document.documentId, changed = false, dryRun = false, 0, 0)
         }
 
@@ -84,6 +100,9 @@ class DocumentIngestionService(
         }
         val storedAssets = document.assets.map { it to assetStore.store(it) }
         transactions.executeWithoutResult { replace(request, document, preparedChunks, embeddings, storedAssets) }
+        telemetry?.count("rag_ingestion_documents_total")
+        telemetry?.count("rag_ingestion_chunks_total", preparedChunks.size.toDouble())
+        telemetry?.count("rag_ingestion_assets_total", document.assets.size.toDouble())
         return IngestionResult(document.documentId, changed = true, dryRun = false, preparedChunks.size, document.assets.size)
     }
 

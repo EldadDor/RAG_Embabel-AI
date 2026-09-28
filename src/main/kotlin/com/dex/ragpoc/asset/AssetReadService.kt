@@ -1,5 +1,7 @@
 package com.dex.ragpoc.asset
 
+import com.dex.ragpoc.config.RagOperation
+import com.dex.ragpoc.config.RagTelemetry
 import com.dex.ragpoc.identity.Principal
 import com.dex.ragpoc.ingestion.ContentAddressedAssetStore
 import com.dex.ragpoc.persistence.JdbcDocumentAssetRepository
@@ -21,8 +23,20 @@ class AssetReadService(
     private val assets: JdbcDocumentAssetRepository,
     private val access: WorkspaceAccessService,
     private val storage: ContentAddressedAssetStore,
+    private val telemetry: RagTelemetry? = null,
 ) {
     fun read(
+        principal: Principal,
+        workspaceId: String,
+        assetId: String,
+    ): AssetContent =
+        if (telemetry != null) {
+            telemetry.observe(RagOperation.ASSET_READ) { readPrepared(principal, workspaceId, assetId) }
+        } else {
+            readPrepared(principal, workspaceId, assetId)
+        }
+
+    private fun readPrepared(
         principal: Principal,
         workspaceId: String,
         assetId: String,

@@ -1,6 +1,8 @@
 package com.dex.ragpoc.schema
 
 import com.dex.ragpoc.config.AppProperties
+import com.dex.ragpoc.config.RagOperation
+import com.dex.ragpoc.config.RagTelemetry
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.jdbc.core.JdbcTemplate
@@ -179,10 +181,11 @@ class JdbcSchemaMetadataReader(
 class SharedSchemaValidator(
     metadata: JdbcSchemaMetadataReader,
     properties: AppProperties,
+    private val telemetry: RagTelemetry? = null,
 ) : ApplicationRunner {
     private val validator = SharedSchemaValidationService(metadata, properties)
 
     override fun run(args: ApplicationArguments) {
-        validator.validate()
+        if (telemetry != null) telemetry.observe(RagOperation.SCHEMA_VALIDATION) { validator.validate() } else validator.validate()
     }
 }
