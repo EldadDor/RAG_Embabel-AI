@@ -10,7 +10,7 @@ The service sends OTLP metrics and traces to `http://localhost:4318` by default.
 
 | Service | URL |
 | --- | --- |
-| Grafana | `http://localhost:3000` (`admin` / `admin`) |
+| Grafana | `http://localhost:3300` (`admin` / `admin`) |
 | Prometheus | `http://localhost:9090` |
 | Tempo | `http://localhost:3200` |
 | Collector diagnostics | `http://localhost:8888/metrics` |
