@@ -1,0 +1,17 @@
+{
+  "description": "Workspace startup checks for the RAG Embabel AI repository.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .codex/hooks/session-start-git-safe-directory.ps1",
+            "statusMessage": "Checking Git access to the sandbox workspace"
+          }
+        ]
+      }
+    ]
+  }
+}

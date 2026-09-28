@@ -3,16 +3,19 @@ spring:
     activate:
       on-profile: work
   ai:
-    azure:
-      openai:
-        endpoint: ${AZURE_OPENAI_ENDPOINT}
-        api-key: ${AZURE_OPENAI_API_KEY:}
-        chat:
-          options:
-            model: ${CHAT_MODEL}
-        embedding:
-          options:
-            model: ${EMBEDDING_MODEL}
+    model:
+      chat: openai
+      embedding: openai
+    # Spring AI's OpenAI starter supports Microsoft Foundry/Azure OpenAI.
+    # This file only activates under the explicit `work` profile.
+    openai:
+      base-url: ${AZURE_OPENAI_ENDPOINT}
+      api-key: ${AZURE_OPENAI_API_KEY:}
+      microsoft-foundry: true
+      chat:
+        model: ${CHAT_MODEL}
+      embedding:
+        model: ${EMBEDDING_MODEL}
 
 app:
   chat:

@@ -1,6 +1,6 @@
 # Next phase backlog
 
-**Last reviewed:** 2026-09-27
+**Last reviewed:** 2026-09-28
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |

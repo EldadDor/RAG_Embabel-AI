@@ -1,5 +1,6 @@
 package com.dex.ragpoc.providers
 
+import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.domain.ModelProfile
 import com.dex.ragpoc.persistence.JdbcEmbeddingCacheRepository
 import com.dex.ragpoc.persistence.JdbcModelProfileRepository
@@ -16,6 +17,7 @@ class ProfiledEmbeddingService(
     private val profiles: JdbcModelProfileRepository,
     private val cache: JdbcEmbeddingCacheRepository,
     private val embeddingModel: EmbeddingModel,
+    private val properties: AppProperties,
 ) {
     fun query(
         profileName: String,
@@ -30,11 +32,42 @@ class ProfiledEmbeddingService(
     fun resolveReady(profileName: String): ModelProfile {
         val profile = profiles.get(profileName) ?: throw ModelProfileUnavailable("Unknown model profile: $profileName")
         if (profile.status != "ready") throw ModelProfileUnavailable("Model profile $profileName is not ready")
+        validateProfile(profile)
+        return profile
+    }
+
+    /**
+     * Warms a draft or already-warming profile with one document-prefixed probe.
+     * It deliberately has no dependency on chunk loading or persistence, so it
+     * cannot re-chunk the corpus while a profile is being prepared.
+     */
+    fun warm(profileName: String): ModelProfile {
+        val profile = profiles.get(profileName) ?: throw ModelProfileUnavailable("Unknown model profile: $profileName")
+        require(profile.status in setOf("draft", "warming")) {
+            "Model profile $profileName must be draft or warming to warm"
+        }
+        validateProfile(profile)
+        profiles.setStatus(profileName, "warming")
+        try {
+            embed(profile, WARMUP_TEXT, "warmup")
+            profiles.setStatus(profileName, "ready")
+            return profile.copy(status = "ready")
+        } catch (error: RuntimeException) {
+            profiles.setStatus(profileName, profile.status)
+            throw error
+        }
+    }
+
+    fun storageTarget(profileName: String): String = resolveReady(profileName).storageTarget
+
+    private fun validateProfile(profile: ModelProfile) {
         require(Regex("^[a-z_][a-z0-9_]*$").matches(profile.storageTarget)) {
             "Model profile storage target is invalid"
         }
         require(profile.dimensions > 0) { "Model profile dimensions must be positive" }
-        return profile
+        require(providerMatches(profile.provider, properties.embedding.provider)) {
+            "Model profile provider ${profile.provider} does not match active embedding provider ${properties.embedding.provider}"
+        }
     }
 
     private fun embed(
@@ -44,10 +77,14 @@ class ProfiledEmbeddingService(
     ): List<Float> {
         val effective = (if (purpose == "query") profile.queryPrefix else profile.documentPrefix) + text
         val key = cacheKey(profile, effective, purpose)
-        cache.get(key, profile.dimensions)?.let { return it }
+        if (properties.embedding.cacheEnabled) {
+            cache.get(key, profile.dimensions)?.let { return it }
+        }
         val embedding = embeddingModel.embed(listOf(effective)).single().toList()
         require(embedding.size == profile.dimensions) { "Embedding dimensions do not match the model profile" }
-        cache.put(key, profile.provider, profile.model, profile.dimensions, embedding)
+        if (properties.embedding.cacheEnabled) {
+            cache.put(key, profile.provider, profile.model, profile.dimensions, embedding)
+        }
         return embedding
     }
 
@@ -59,5 +96,21 @@ class ProfiledEmbeddingService(
         val normalized = text.trim().split(Regex("\\s+")).joinToString(" ")
         val material = "${profile.provider}\u0000${profile.model}\u0000${profile.dimensions}\u0000$purpose\u0000$normalized"
         return MessageDigest.getInstance("SHA-256").digest(material.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun providerMatches(
+        profileProvider: String,
+        activeProvider: String,
+    ): Boolean = providerAliases(profileProvider).intersect(providerAliases(activeProvider)).isNotEmpty()
+
+    private fun providerAliases(provider: String): Set<String> =
+        when (provider.lowercase()) {
+            "azure", "azure_openai" -> setOf("azure_openai")
+            "openai", "openai_compatible" -> setOf("openai_compatible")
+            else -> setOf(provider.lowercase())
+        }
+
+    private companion object {
+        const val WARMUP_TEXT = "model profile warmup"
     }
 }
