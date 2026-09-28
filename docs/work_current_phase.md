@@ -6,7 +6,7 @@
 
 **RDP-11 closure:** G4 approved 2026-09-28. Completion evidence is `a5a3463`, `7f8450e`, `5c25ee0`, and `86415d6`; carry-over is RDP-12 through RDP-16 and EXP-01, sequenced in `docs/next_phase.md`.
 
-**RDP-12 status:** In progress. The approved design adds provider-neutral retrieval/chat services, narrow JDBC semantic/lexical retrieval ports, and a standard `/chat` controller using the RDP-11 gateways and existing conversation repository. Offline fixture coverage will verify rankings, grounding, memory, citations, and abstention; live providers/database services remain out of scope.
+**RDP-12 status:** In progress. The approved implementation now provides provider-neutral retrieval/chat services, narrow JDBC semantic/lexical retrieval, deterministic RRF, an optional reranking seam with safe fallback, a standard `/chat` controller with configured defaults, and durable-memory orchestration. Focused offline tests pass; live providers/database services remain out of scope.
 
 **Latest RDP-10 evidence:** Commit `3093b46` adds the approved identity,
 workspace, session, asset, and safe-error API layers. Focused RDP-10 tests

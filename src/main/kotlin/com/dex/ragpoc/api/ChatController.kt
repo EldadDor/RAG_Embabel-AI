@@ -2,6 +2,7 @@ package com.dex.ragpoc.api
 
 import com.dex.ragpoc.chat.ChatAnswer
 import com.dex.ragpoc.chat.ChatService
+import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.identity.PrincipalResolver
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
@@ -18,7 +19,7 @@ data class ChatRequest(
     @field:Min(1) @field:Max(20) val topK: Int? = null,
     val includeDebug: Boolean = false,
     val sessionId: String? = null,
-    @field:NotBlank val workspaceId: String,
+    val workspaceId: String? = null,
     val chunkingProfile: String? = null,
     val modelProfile: String? = null,
 )
@@ -28,6 +29,7 @@ data class ChatRequest(
 class ChatController(
     private val chat: ChatService,
     private val principals: PrincipalResolver,
+    private val properties: AppProperties,
 ) {
     @PostMapping
     fun answer(
@@ -37,11 +39,11 @@ class ChatController(
         chat.answer(
             body.question,
             principals.resolve(request),
-            body.workspaceId,
+            body.workspaceId ?: properties.rag.defaultWorkspaceId,
             body.sessionId,
-            body.chunkingProfile ?: "default",
-            body.modelProfile ?: "bge-m3",
-            body.topK ?: 5,
+            body.chunkingProfile ?: properties.rag.defaultChunkingProfile,
+            body.modelProfile ?: properties.rag.modelProfile,
+            body.topK ?: properties.rag.topK,
             body.includeDebug,
         )
 }

@@ -41,14 +41,32 @@ class RetrievalServiceTest {
         verify(exactly = 0) { repository.lexical(any(), any(), any(), any(), any()) }
     }
 
+    @Test
+    fun `enabled reranker can reorder candidates before trimming`() {
+        val embeddings = mockk<ProfiledEmbeddingService>()
+        val repository = mockk<RetrievalRepository>()
+        every { embeddings.resolveReady("profile") } returns ModelProfile("profile", "ollama", "bge", 2, "chunks")
+        every { embeddings.query("profile", "question") } returns listOf(.1f, .2f)
+        every { repository.semantic(any(), any(), any(), any(), any()) } returns listOf(chunk("first", .9), chunk("second", .8))
+
+        val result =
+            service(embeddings, repository, hybrid = false, rerank = true, reranker = Reranker { _, candidates -> candidates.reversed() })
+                .retrieve("question", "alpha", modelProfile = "profile", topK = 1)
+
+        assertEquals(listOf("second"), result.chunks.map { it.chunkId })
+    }
+
     private fun service(
         embeddings: ProfiledEmbeddingService,
         repository: RetrievalRepository,
         hybrid: Boolean = true,
+        rerank: Boolean = false,
+        reranker: Reranker? = null,
     ) = RetrievalService(
         embeddings,
         repository,
-        AppProperties(rag = AppProperties.Rag(modelProfile = "profile", hybridSearchEnabled = hybrid)),
+        AppProperties(rag = AppProperties.Rag(modelProfile = "profile", hybridSearchEnabled = hybrid, rerankEnabled = rerank)),
+        reranker,
     )
 
     private fun chunk(

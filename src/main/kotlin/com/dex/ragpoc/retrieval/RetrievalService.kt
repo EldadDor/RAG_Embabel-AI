@@ -30,11 +30,20 @@ data class RetrievalResult(
     val modelProfile: ModelProfile,
 )
 
+/** Optional local reranking boundary; absence intentionally preserves fused order. */
+fun interface Reranker {
+    fun rerank(
+        question: String,
+        candidates: List<RetrievedChunk>,
+    ): List<RetrievedChunk>
+}
+
 @Service
 class RetrievalService(
     private val embeddings: ProfiledEmbeddingService,
     private val repository: RetrievalRepository,
     private val properties: AppProperties,
+    private val reranker: Reranker? = null,
 ) {
     fun retrieve(
         question: String,
@@ -57,7 +66,8 @@ class RetrievalService(
             } else {
                 semantic
             }
-        return RetrievalResult(candidates.take(topK), profile)
+        val ordered = if (properties.rag.rerankEnabled) reranker?.rerank(question, candidates) ?: candidates else candidates
+        return RetrievalResult(ordered.take(topK), profile)
     }
 
     private fun reciprocalRankFusion(
