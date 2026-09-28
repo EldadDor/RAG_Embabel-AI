@@ -17,7 +17,7 @@
 # JDBC URL:
 #   jdbc:postgresql://localhost:5432/ragdb
 
-version: "3.9"
+name: rag-pgvector
 
 services:
   postgres-pgvector:
