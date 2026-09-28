@@ -4,7 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-12 | Retrieval, grounded chat, and memory | RDP-10 and RDP-11 | Retrieval/chat/evaluation fixtures match Python. |
 | RDP-13 | Streaming and telemetry instrumentation | RDP-03 and RDP-12 | Streaming behavior and full local metrics/tracing coverage pass. |
 | RDP-14 | Evaluation, resilience, and alternative storage | RDP-13 | Evaluation/failure tests pass; Qdrant remains a supported alternative. |
 | RDP-15 | Cross-runtime verification | RDP-09 through RDP-14 and user-run environment | Controlled shared-database round trips succeed in a dedicated workspace/profile. |
