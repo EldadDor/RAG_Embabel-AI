@@ -10,7 +10,8 @@
 #   - If CNI warnings persist, edit /home/<user>/.config/cni/net.d/docker_default.conflist
 #     and change "cniVersion": "1.0.0" → "0.4.0"
 
-version: "3.9"
+name: rag-app
+
 services:
   qdrant:
     image: docker.io/qdrant/qdrant:latest

@@ -9,7 +9,7 @@
 #   docker-compose -f docker/docker-compose-work.yml up -d
 #   docker-compose -f docker/docker-compose-work.yml down -v  (wipe data)
 # ============================================================
-version: "3.9"
+name: rag-work
 
 services:
   postgres:

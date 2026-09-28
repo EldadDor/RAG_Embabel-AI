@@ -1,7 +1,10 @@
+name: rag-observability
+
 services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.141.0
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    restart: unless-stopped
     ports:
       - "4317:4317"
       - "4318:4318"
@@ -11,6 +14,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.8.1
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
@@ -20,6 +24,7 @@ services:
   tempo:
     image: grafana/tempo:2.9.0
     command: ["-config.file=/etc/tempo.yml"]
+    restart: unless-stopped
     ports:
       - "13200:3200"
     volumes:
@@ -28,8 +33,9 @@ services:
 
   grafana:
     image: grafana/grafana:12.4.0
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3300:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
