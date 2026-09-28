@@ -8,6 +8,8 @@
 
 **RDP-12 status:** Completed. Provider-neutral hybrid retrieval, grounded chat, bounded durable memory, configured defaults, safe optional reranking, citations/debug data, and upstream failure handling pass offline verification. An approved read-only database check verified both deployed retrieval query paths. Provider calls and data writes remain intentionally unrun.
 
+**RDP-12 closure:** G4 approved 2026-09-28. Completion evidence is `2d12576`, `37c10d0`, `dcdb433`, `2e7d014`, `b34637c`, and `384f4a3`; carry-over is RDP-13 through RDP-16 and EXP-01, sequenced in `docs/next_phase.md`.
+
 **Latest RDP-10 evidence:** Commit `3093b46` adds the approved identity,
 workspace, session, asset, and safe-error API layers. Focused RDP-10 tests
 passed 8 tests; the full suite passed 55 tests with 0 failures/errors and 6

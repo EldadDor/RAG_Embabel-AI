@@ -6,6 +6,8 @@
 
 | Providers, profiles, and embedding cache (RDP-11) | Completed 2026-09-28 | Added provider-neutral Spring AI chat/embedding gateways, ready-profile compatibility and storage-target handling, vector-length validation, float32 cache compatibility, and profile warming without rechunking. Work-only Microsoft Foundry settings remain inactive unless the user runs the `work` profile. Focused provider tests passed 8 tests; full `mvn test` passed 63 tests with 0 failures/errors and 6 existing skips. Carry-over: RDP-12 retrieval, grounded chat, and memory; RDP-13 through RDP-16 and EXP-01 remain sequenced in the backlog. |
 
+| Retrieval, grounded chat, and memory (RDP-12) | Completed 2026-09-28 | Added profile-scoped JDBC semantic/lexical retrieval, score thresholding, deterministic RRF, safe optional reranking, grounded chat with citations/debug data and abstention, bounded durable-memory rewrite/summary handling, and safe upstream-provider errors. Focused tests passed 11 tests; full offline suite passed 71 tests with 0 failures/errors and 6 existing skips. A read-only PostgreSQL check returned five semantic and five lexical candidates. Carry-over: RDP-13 streaming and telemetry, then RDP-14 through RDP-16 and EXP-01. |
+
 | Asset lifecycle and ingestion (RDP-09) | Completed 2026-09-27 | Python-compatible asset identity/linking, dry-run/unchanged/rollback/recursive-cleanup coverage, real database persistence, and actual-model ingestion for text, Markdown, HTML, code, PDF, and Word all passed. Carry-over: none. |
 
 | Phase | Status | Evidence |
