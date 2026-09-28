@@ -31,6 +31,8 @@ data class ChatSource(
     val snippet: String,
 )
 
+class ChatProviderException : RuntimeException("Chat provider request failed")
+
 @Service
 class ChatService(
     private val retrieval: RetrievalService,
@@ -56,7 +58,7 @@ class ChatService(
         val rewritten = rewrite(question, history, conversations.summary(session.sessionId)?.summary)
         val retrieved = retrieval.retrieve(rewritten, workspaceId, chunkingProfile, modelProfile, topK)
         val grounded = retrieved.chunks.isNotEmpty()
-        val answer = if (grounded) chat.complete(groundedPrompt(question, retrieved.chunks.map { it.text })) else ABSTENTION
+        val answer = if (grounded) complete(groundedPrompt(question, retrieved.chunks.map { it.text })) else ABSTENTION
         conversations.appendTurn(session.sessionId, "user", question)
         conversations.appendTurn(session.sessionId, "assistant", answer)
         refreshSummaryIfNeeded(session.sessionId)
@@ -113,14 +115,13 @@ class ChatService(
         if (history.isEmpty() && summary.isNullOrBlank()) return question
         val historyText = history.takeLast(6).joinToString("\n") { "${it.role}: ${it.content}" }
         val result =
-            chat
-                .complete(
-                    """Rewrite the latest question into a standalone retrieval query. Return only the query.
+            complete(
+                """Rewrite the latest question into a standalone retrieval query. Return only the query.
             |Summary: ${summary ?: "(none)"}
             |Conversation: ${historyText.ifBlank { "(none)" }}
             |Latest question: $question
-                    """.trimMargin(),
-                ).trim()
+                """.trimMargin(),
+            ).trim()
         return result.ifBlank { question }
     }
 
@@ -131,13 +132,12 @@ class ChatService(
             if (turns.size < properties.memory.summaryAfterTurns) return
             val existing = conversations.summary(sessionId)?.summary
             val replacement =
-                chat
-                    .complete(
-                        """Maintain a concise factual working-memory summary. Keep confirmed context, decisions, constraints, and unresolved questions only.
+                complete(
+                    """Maintain a concise factual working-memory summary. Keep confirmed context, decisions, constraints, and unresolved questions only.
                         |Existing summary: ${existing ?: "(none)"}
                         |New turns: ${turns.joinToString("\n") { "${it.role}: ${it.content}" }}
-                        """.trimMargin(),
-                    ).trim()
+                    """.trimMargin(),
+                ).trim()
             if (replacement.isNotEmpty()) conversations.upsertSummary(ConversationSummary(sessionId, replacement, turns.last().id))
         } catch (_: RuntimeException) {
             // Memory enrichment is not allowed to fail an otherwise completed response.
@@ -153,6 +153,13 @@ class ChatService(
             |${passages.mapIndexed { index, text -> "[${index + 1}] ${text.trim()}" }.joinToString("\n\n---\n\n")}
             |Question: $question
         """.trimMargin()
+
+    private fun complete(prompt: String): String =
+        try {
+            chat.complete(prompt)
+        } catch (error: RuntimeException) {
+            throw ChatProviderException().also { it.initCause(error) }
+        }
 
     private companion object {
         const val ABSTENTION = "I don't have enough information in the indexed documents to answer this question."

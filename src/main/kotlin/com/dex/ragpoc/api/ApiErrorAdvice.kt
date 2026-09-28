@@ -2,6 +2,7 @@ package com.dex.ragpoc.api
 
 import com.dex.ragpoc.asset.AssetNotFoundException
 import com.dex.ragpoc.asset.UnsupportedAssetMediaTypeException
+import com.dex.ragpoc.chat.ChatProviderException
 import com.dex.ragpoc.conversation.SessionNotFoundException
 import com.dex.ragpoc.identity.AuthenticationRequiredException
 import com.dex.ragpoc.workspace.WorkspaceAccessDeniedException
@@ -31,6 +32,10 @@ class ApiErrorAdvice {
     @ExceptionHandler(UnsupportedAssetMediaTypeException::class)
     fun unsupportedMediaType() =
         error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "unsupported_media_type", "The requested media type cannot be displayed.")
+
+    @ExceptionHandler(ChatProviderException::class)
+    fun chatProviderFailure() =
+        error(HttpStatus.BAD_GATEWAY, "upstream_provider_error", "The chat provider could not complete the request.")
 
     @ExceptionHandler(MethodArgumentNotValidException::class, HandlerMethodValidationException::class, IllegalArgumentException::class)
     fun invalidRequest() = error(HttpStatus.UNPROCESSABLE_ENTITY, "invalid_request", "The request is invalid.")

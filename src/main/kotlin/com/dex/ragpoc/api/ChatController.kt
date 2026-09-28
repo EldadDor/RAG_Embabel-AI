@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 data class ChatRequest(
     @field:NotBlank val question: String,
     @field:Min(1) @field:Max(20) val topK: Int? = null,
-    val includeDebug: Boolean = false,
+    val includeDebug: Boolean? = false,
     val sessionId: String? = null,
     val workspaceId: String? = null,
     val chunkingProfile: String? = null,
@@ -44,6 +44,6 @@ class ChatController(
             body.chunkingProfile ?: properties.rag.defaultChunkingProfile,
             body.modelProfile ?: properties.rag.modelProfile,
             body.topK ?: properties.rag.topK,
-            body.includeDebug,
+            body.includeDebug == true,
         )
 }

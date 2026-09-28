@@ -3,6 +3,7 @@ package com.dex.ragpoc.api
 import com.dex.ragpoc.asset.AssetContent
 import com.dex.ragpoc.asset.AssetReadService
 import com.dex.ragpoc.chat.ChatAnswer
+import com.dex.ragpoc.chat.ChatProviderException
 import com.dex.ragpoc.chat.ChatService
 import com.dex.ragpoc.chat.ChatSource
 import com.dex.ragpoc.config.AppProperties
@@ -106,5 +107,15 @@ class Rdp10ApiControllerTest {
             .andExpect(jsonPath("$.grounded").value(true))
             .andExpect(jsonPath("$.sessionId").value("session-1"))
             .andExpect(jsonPath("$.sources[0].chunkId").value("chunk"))
+    }
+
+    @Test
+    fun `chat provider failure returns a safe gateway error`() {
+        every { chat.answer(any(), any(), any(), any(), any(), any(), any(), any()) } throws ChatProviderException()
+
+        mockMvc
+            .perform(post("/chat").contentType("application/json").content("""{"question":"What changed?","includeDebug":false}"""))
+            .andExpect(status().isBadGateway)
+            .andExpect(jsonPath("$.code").value("upstream_provider_error"))
     }
 }

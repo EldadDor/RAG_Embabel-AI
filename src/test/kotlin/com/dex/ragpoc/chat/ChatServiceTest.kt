@@ -16,6 +16,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -59,6 +60,23 @@ class ChatServiceTest {
         assertEquals("chunk", answer.sources.single().chunkId)
         assertEquals("Answer", answer.answer)
         verify(exactly = 2) { conversations.appendTurn(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `provider failure does not persist a partial conversation`() {
+        val retrieval = mockk<RetrievalService>()
+        val conversations = mockk<JdbcConversationRepository>()
+        val gateway = mockk<ChatGateway>()
+        every { retrieval.retrieve(any(), any(), any(), any(), any()) } returns
+            RetrievalResult(listOf(RetrievedChunk("chunk", "doc", "guide.md", "Evidence", .9)), profile())
+        every { conversations.create(any()) } returns Unit
+        every { conversations.recentTurns(any(), 10) } returns emptyList()
+        every { conversations.summary(any()) } returns null
+        every { gateway.complete(any()) } throws IllegalStateException("unavailable")
+
+        assertFailsWith<ChatProviderException> { service(retrieval, conversations, gateway).answer("Question", principal, "alpha") }
+
+        verify(exactly = 0) { conversations.appendTurn(any(), any(), any(), any()) }
     }
 
     private fun service(
