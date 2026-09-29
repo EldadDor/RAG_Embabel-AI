@@ -168,6 +168,24 @@ The existing Python-ingested PostgreSQL corpus may be used read-only for Kotlin 
 
 **Done when:** you confirm both runtimes work safely against the same database.
 
+### RDP-17 — Parity ingestion HTTP API
+
+- Before any manual chat validation, expose the current JDBC `DocumentIngestionService` through a parity route, `POST /ingest`; do not activate or repurpose the legacy `POST /api/ingest` POC.
+- Match the Python JSON request contract: required `source_path`; optional `recursive`, `workspace_id`, `chunking_profile`, `model_profile`, and `dry_run`. Match the response's total indexed count, selected chunking/model profile, dry-run flag, and per-document ID/path/chunk/skip/asset result fields.
+- Resolve and authorize the principal/workspace before reading a source path. At G2, define the permitted source-root policy and error mapping so the new API cannot inherit the legacy arbitrary-path behavior.
+- Extend the one-file Kotlin ingestion service only as needed for deterministic directory traversal, recursive handling, and Python-compatible aggregate results. Reuse existing dry-run, unchanged, replacement, asset-link, profile/cache, and telemetry behavior; do not create schema or data-migration work.
+- Add controller/contract tests with fake embeddings. The user alone runs the controlled real embedding ingestion check, observes the existing ingestion/loader/chunker/cache metrics and traces, and accepts it before manually testing chat.
+
+**Done when:** the authorized `/ingest` route matches the Python contract with offline tests; the user has accepted a controlled real ingestion run before chat testing; and no legacy POC route is activated or removed.
+
+### LEG-01 — Retire legacy vector-store POC (after replacement acceptance)
+
+- Do not start this task until RDP-17 is accepted by the user and its replacement route is available.
+- At its own G2, remove the obsolete `legacy-poc`, `vector-store-poc`, and `legacy-ollama-chat` code path: old `/api/ingest` and `/api/rag` controllers, Spring AI `VectorStore` POC services/configuration/adapter, POC-only tests, dependency, and historical README instructions.
+- Retain `local`, `work`, and `rdp05-fixture-write`; do not remove or rename active provider configuration as part of retirement.
+
+**Done when:** the replacement ingestion API remains covered and accepted, legacy POC dependencies/routes are absent, and documentation describes only the active routes.
+
 ### RDP-16 — PPTX parsing and ingestion (later extension)
 
 - Add `.pptx` to the loader registry after the current Python parity sequence. Use Apache POI XSLF (`poi-ooxml`) as the proposed Java parser; confirm its version and dependency graph at the design gate.

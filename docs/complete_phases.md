@@ -14,6 +14,8 @@
 
 | Cross-runtime verification (RDP-15) | Completed 2026-09-29 | Kotlin and Python confirmed the same controlled PostgreSQL fixture workspaces: source documents, chunks, asset links, sessions, ready `bge-m3` profile, and a 1024-dimensional Kotlin cache payload. Focused offline Kotlin coverage passed 31 tests with 0 failures/errors; a Python 3.14/asyncpg read-only verifier confirmed both fixture workspaces and the Kotlin-written cache payload. The default workspace, schema, APIs, Docker, provider-generated retrieval, and production ingestion remained untouched. G4 approved; closure record `004955f`. Carry-over: RDP-16 PPTX parsing/ingestion and EXP-01 isolated Embabel evaluation. |
 
+| Ingestion route and profile review (DOC-09) | Completed 2026-09-29 | Confirmed that `/api/ingest` and `/api/rag` are inactive legacy `legacy-poc & vector-store-poc` routes, while current local chat/embedding providers and JDBC ingestion telemetry are active independently. The legacy-removal proposal was withdrawn. RDP-17 now delivers a Python-parity authorized `POST /ingest` API before user-run chat validation; legacy retirement is deferred to LEG-01 after replacement acceptance and separate G2 approval. No runtime, provider, database, or source change occurred. G4 approved. Carry-over: RDP-17, LEG-01, RDP-16, and EXP-01. |
+
 | Asset lifecycle and ingestion (RDP-09) | Completed 2026-09-27 | Python-compatible asset identity/linking, dry-run/unchanged/rollback/recursive-cleanup coverage, real database persistence, and actual-model ingestion for text, Markdown, HTML, code, PDF, and Word all passed. Carry-over: none. |
 
 | Phase | Status | Evidence |
