@@ -1,7 +1,10 @@
 package com.dex.ragpoc.config
 
+import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micrometer.observation.ObservationRegistry
+import io.mockk.every
+import io.mockk.mockk
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -35,5 +38,16 @@ class RagTelemetryTest {
                 .toSet(),
         )
         assertFailsWith<IllegalArgumentException> { telemetry.count("workspace_id") }
+    }
+
+    @Test
+    fun `meter failures do not affect application work`() {
+        val meters = mockk<MeterRegistry>()
+        every { meters.counter(any()) } throws IllegalStateException("metrics unavailable")
+        val telemetry = RagTelemetry(meters, ObservationRegistry.create())
+
+        telemetry.count("rag_retrieval_candidates_total")
+
+        assertEquals("answer", telemetry.observe(RagOperation.CHAT) { "answer" })
     }
 }

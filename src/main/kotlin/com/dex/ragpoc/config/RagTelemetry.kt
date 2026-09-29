@@ -38,37 +38,41 @@ class RagTelemetry(
     ): T {
         val observation = start(operation)
         val started = System.nanoTime()
-        observation.openScope().use {
-            try {
-                val result = block()
-                finish(operation, RagOutcome.SUCCESS, started)
-                return result
-            } catch (error: RuntimeException) {
-                observation.error(error)
-                finish(operation, RagOutcome.ERROR, started)
-                throw error
-            } finally {
-                observation.stop()
-            }
+        val scope = runCatching { observation.openScope() }.getOrNull()
+        try {
+            val result = block()
+            finish(operation, RagOutcome.SUCCESS, started)
+            return result
+        } catch (error: RuntimeException) {
+            runCatching { observation.error(error) }
+            finish(operation, RagOutcome.ERROR, started)
+            throw error
+        } finally {
+            runCatching { scope?.close() }
+            runCatching { observation.stop() }
         }
     }
 
     fun start(operation: RagOperation): Observation =
-        Observation.start("rag.operation", observations).lowCardinalityKeyValue("operation", operation.name.lowercase())
+        runCatching {
+            Observation.start("rag.operation", observations).lowCardinalityKeyValue("operation", operation.name.lowercase())
+        }.getOrDefault(Observation.NOOP)
 
     fun finish(
         operation: RagOperation,
         outcome: RagOutcome,
         startedNanos: Long,
     ) {
-        val tags = arrayOf("operation", operation.name.lowercase(), "outcome", outcome.name.lowercase())
-        meters.counter("rag_operations_total", *tags).increment()
-        Timer
-            .builder("rag_operation_duration")
-            .tags(*tags)
-            .publishPercentileHistogram()
-            .register(meters)
-            .record(System.nanoTime() - startedNanos, TimeUnit.NANOSECONDS)
+        runCatching {
+            val tags = arrayOf("operation", operation.name.lowercase(), "outcome", outcome.name.lowercase())
+            meters.counter("rag_operations_total", *tags).increment()
+            Timer
+                .builder("rag_operation_duration")
+                .tags(*tags)
+                .publishPercentileHistogram()
+                .register(meters)
+                .record(System.nanoTime() - startedNanos, TimeUnit.NANOSECONDS)
+        }
     }
 
     fun count(
@@ -76,11 +80,13 @@ class RagTelemetry(
         amount: Double = 1.0,
     ) {
         require(name in FIXED_COUNTS) { "Unknown telemetry counter" }
-        meters.counter(name).increment(amount)
+        runCatching { meters.counter(name).increment(amount) }
     }
 
     fun firstToken(startedNanos: Long) {
-        Timer.builder("rag_chat_time_to_first_token").register(meters).record(System.nanoTime() - startedNanos, TimeUnit.NANOSECONDS)
+        runCatching {
+            Timer.builder("rag_chat_time_to_first_token").register(meters).record(System.nanoTime() - startedNanos, TimeUnit.NANOSECONDS)
+        }
     }
 
     private companion object {

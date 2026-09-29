@@ -4,7 +4,6 @@
 
 | ID | Task | Entry condition | Done when |
 | --- | --- | --- | --- |
-| RDP-14 | Evaluation, resilience, and alternative storage | RDP-13 completed | Evaluation/failure tests pass; Qdrant remains a supported alternative. |
 | RDP-15 | Cross-runtime verification | RDP-09 through RDP-14 and user-run environment | Controlled shared-database round trips succeed in a dedicated workspace/profile. |
 | RDP-16 | PPTX parsing and ingestion | RDP-15; later extension, not required for RDP-10 | Apache POI XSLF loads safe presentations with slide-order text and tables, slide provenance, embedded images, asset-to-chunk links, and ingestion lifecycle coverage. |
 | EXP-01 | Evaluate isolated Embabel feature | RDP-15 | A separately exposed experiment demonstrates benefit without changing parity behavior. |

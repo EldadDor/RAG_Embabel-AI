@@ -9,6 +9,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class RetrievalServiceTest {
     @Test
@@ -54,6 +55,19 @@ class RetrievalServiceTest {
                 .retrieve("question", "alpha", modelProfile = "profile", topK = 1)
 
         assertEquals(listOf("second"), result.chunks.map { it.chunkId })
+    }
+
+    @Test
+    fun `database retrieval failure propagates without invoking lexical search`() {
+        val embeddings = mockk<ProfiledEmbeddingService>()
+        val repository = mockk<RetrievalRepository>()
+        every { embeddings.resolveReady("profile") } returns ModelProfile("profile", "ollama", "bge", 2, "chunks")
+        every { embeddings.query("profile", "question") } returns listOf(.1f, .2f)
+        every { repository.semantic(any(), any(), any(), any(), any()) } throws IllegalStateException("database timeout")
+
+        assertFailsWith<IllegalStateException> { service(embeddings, repository).retrieve("question", "alpha", modelProfile = "profile") }
+
+        verify(exactly = 0) { repository.lexical(any(), any(), any(), any(), any()) }
     }
 
     private fun service(
