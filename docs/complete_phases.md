@@ -1,12 +1,14 @@
 # Completed phases
 
-**Last reviewed:** 2026-09-28
+**Last reviewed:** 2026-09-29
 
 | Identity, sessions, API errors, and assets (RDP-10) | Completed 2026-09-27 | Added principal resolution, workspace authorization, masked session lifecycle, bounded durable-memory cleanup, protected asset reads with image validation/ETags, and safe error envelopes. Focused tests passed 8 tests; full `mvn test` passed 55 tests with 0 failures/errors and 6 existing skips. Carry-over: RDP-11 through RDP-16 and EXP-01. |
 
 | Providers, profiles, and embedding cache (RDP-11) | Completed 2026-09-28 | Added provider-neutral Spring AI chat/embedding gateways, ready-profile compatibility and storage-target handling, vector-length validation, float32 cache compatibility, and profile warming without rechunking. Work-only Microsoft Foundry settings remain inactive unless the user runs the `work` profile. Focused provider tests passed 8 tests; full `mvn test` passed 63 tests with 0 failures/errors and 6 existing skips. Carry-over: RDP-12 retrieval, grounded chat, and memory; RDP-13 through RDP-16 and EXP-01 remain sequenced in the backlog. |
 
 | Retrieval, grounded chat, and memory (RDP-12) | Completed 2026-09-28 | Added profile-scoped JDBC semantic/lexical retrieval, score thresholding, deterministic RRF, safe optional reranking, grounded chat with citations/debug data and abstention, bounded durable-memory rewrite/summary handling, and safe upstream-provider errors. Focused tests passed 11 tests; full offline suite passed 71 tests with 0 failures/errors and 6 existing skips. A read-only PostgreSQL check returned five semantic and five lexical candidates. Carry-over: RDP-13 streaming and telemetry, then RDP-14 through RDP-16 and EXP-01. |
+
+| Streaming and telemetry instrumentation (RDP-13) | Completed 2026-09-29 | Added `POST /chat/stream` with provider deltas and answer/meta/error/done events, cancellation and complete-answer persistence semantics, constrained Micrometer instrumentation, and Grafana dashboard provisioning. Offline `mvn spotless:apply test` passed 78 tests with 0 failures/errors and 6 existing skips. Laptop runtime validation confirmed PostgreSQL/app health, real grounded SSE completion, Prometheus metrics, Grafana dashboard, Collector-to-Tempo export, and the `http post /chat/stream` Tempo trace with `rag.operation` and chat-model child spans. G3 approved; changes pushed through `b0cc73a`. Carry-over: RDP-14 evaluation/resilience/Qdrant alternative, RDP-15 cross-runtime verification, RDP-16 PPTX parsing/ingestion, and EXP-01 isolated Embabel evaluation. Docker CLI was not used. |
 
 | Asset lifecycle and ingestion (RDP-09) | Completed 2026-09-27 | Python-compatible asset identity/linking, dry-run/unchanged/rollback/recursive-cleanup coverage, real database persistence, and actual-model ingestion for text, Markdown, HTML, code, PDF, and Word all passed. Carry-over: none. |
 
