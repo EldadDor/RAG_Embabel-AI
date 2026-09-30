@@ -1,6 +1,8 @@
 # Completed phases
 
-**Last reviewed:** 2026-09-29
+**Last reviewed:** 2026-09-30
+
+| Parity ingestion HTTP API (RDP-17) | Completed 2026-09-30 | Added authorized `POST /ingest`, allowed-root checks, deterministic file/directory orchestration, dry-run isolation, selected-model embeddings, aggregate responses, and lifecycle telemetry/logs. Formatting/full offline suite passed: 94 tests, 0 failures/errors, 6 opt-in skips. User reported 173 indexed chunks; Hebrew DOCX run persisted 3 chunks. Prometheus counters/timers and matching application logs confirmed successful stages; Tempo trace `9d34694433cf14b7fc27f8a429959fc9` confirms successful HTTP ingestion and 13 spans. Implementation/evidence commits `aa1b0c8`, `1b896cd`, `4904f4b` pushed by user. G4 approved. Carry-over: LEG-01, RDP-16, EXP-01, LOG-01 (docx4j source-path logging and initialization warnings). Legacy components preserved through acceptance. |
 
 | Identity, sessions, API errors, and assets (RDP-10) | Completed 2026-09-27 | Added principal resolution, workspace authorization, masked session lifecycle, bounded durable-memory cleanup, protected asset reads with image validation/ETags, and safe error envelopes. Focused tests passed 8 tests; full `mvn test` passed 55 tests with 0 failures/errors and 6 existing skips. Carry-over: RDP-11 through RDP-16 and EXP-01. |
 

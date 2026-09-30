@@ -1,105 +1,70 @@
 # RAG_Embabel-AI
 
-Kotlin/Spring Boot service being built for backend parity with RAG-dev-plane. Document loading, chunking, private assets, JDBC interoperability, and the current ingestion and chat HTTP endpoints are implemented.
-
-## Current local run
-
-Use the `local` Spring profile, which is also the default in `application.yml`. Supply the environment variables needed by your local PostgreSQL and model services, then run `rtk proxy mvn spring-boot:run` with the workspace Maven environment described in [the repository instructions](.codex/AGENTS.md). The HTTP port defaults to `8000` (`API_PORT`). Check `http://localhost:8000/actuator/health`.
-
-`POST /ingest` is the active JDBC ingestion route. Before starting the service for an ingestion test, set `INGESTION_ALLOWED_ROOTS` to one or more comma-separated absolute directories that contain the source documents. An empty value rejects all sources. The route checks workspace membership before resolving the path; directory scans include supported files in stable path order, and `recursive` controls nested directories. A source outside an allowed root receives a safe 422 response. See [application-example.yml](application-example.yml) for the equivalent YAML setting. PPTX support is planned as RDP-16.
-
-The JSON request uses Python field names: `source_path` is required; `recursive`, `workspace_id`, `chunking_profile`, `model_profile`, and `dry_run` are optional. For example, a Windows source can be sent as `{"source_path":"C:/documents/guide.pdf","dry_run":true}`. The response reports `indexed`, selected profiles, `dry_run`, and a `documents` array with `doc_id`, `source_path`, `chunks_indexed`, `skipped`, `skip_reason`, and `assets_found`. A dry run parses and chunks without provider or database calls or asset writes. A non-dry run requires a ready model profile and writes vectors to that profile's storage target. The user will run and accept the controlled real ingestion check before testing chat.
-
-The active ingestion service writes INFO logs for batch start/completion and document load, chunking, embedding, and persistence stages, including counts and elapsed times. It omits source paths, document IDs, workspace IDs, and document text. An unchanged repeat logs a skip and does not embed or write again.
-
-`local,legacy-poc` does not expose `POST /api/ingest`: the old PDF controller requires both `legacy-poc` and `vector-store-poc`. Adding `vector-store-poc` selects the obsolete Spring AI `VectorStore` path, which has no active store bean in the current configuration. The old `/api/rag/query` routes have the same profile restriction.
-
-The historical proof-of-concept instructions below are retained for reference and do not describe the current runtime.
+Kotlin/Spring Boot backend with RAG-dev-plane parity: document loading and chunking, private assets, PostgreSQL/pgvector retrieval, grounded chat, durable sessions, and ingestion HTTP APIs. Spring AI handles model calls; application-owned JDBC repositories read and write the shared Python-managed schema.
 
 ## Stack
 
 | Layer | Technology |
-|---|---|
-| Language | Kotlin 2.0.21, JVM 21 |
-| Framework | Spring Boot 3.3.x |
-| AI Abstraction | Spring AI 1.0.0 GA |
-| Agentic RAG | Embabel Agent RAG 0.4.0 |
-| Vector Store | Qdrant (gRPC port 6334) |
-| LLM (cloud) | OpenAI GPT-4o |
-| LLM (local) | Ollama llama3 |
-| Hybrid Search | Lucene BM25 (embabel-agent-rag-lucene) |
-| Tests | MockK + TestContainers |
+| --- | --- |
+| Language/runtime | Kotlin 2.3.21, JDK 25 |
+| Framework | Spring Boot 4.1.1 |
+| Model providers | Spring AI 2.0.1; OpenAI-compatible chat, Ollama embeddings, work-profile Microsoft Foundry |
+| Persistence/retrieval | JDBC, PostgreSQL/pgvector, full-text search, reciprocal rank fusion |
+| Parsing | PDFBox, docx4j 17.1.0, Tree-sitter |
+| Telemetry | Actuator, Micrometer, OpenTelemetry, Prometheus, Grafana, Tempo |
+| Tests | JUnit 5, MockK, offline fixtures and opt-in interoperability checks |
 
-## Quick Start
+Embabel 1.5.2 dependencies are isolated in the optional `embabel-experiments` Maven profile. EXP-01 tracks the planned experiment.
 
-```bash
-# 1. Start infrastructure
-docker-compose -f docker/docker-compose.yml up -d
+## Run locally
 
-# 2. Pull Ollama model (optional — for local LLM)
-docker exec -it ollama ollama pull llama3
+Use the `local` Spring profile, also the default. Supply environment variables for existing PostgreSQL and model services using [application-example.yml](application-example.yml). Python owns shared-schema migrations. Follow [repository instructions](.codex/AGENTS.md) for workspace-local Maven and JGit settings, then run:
 
-# 3. Configure
-cp .env.example .env
-# edit .env with your OPENAI_API_KEY
-
-# 4. Build & run
-mvn clean package -DskipTests
-java -jar target/RAG_Embabel-AI-0.1.0-SNAPSHOT.jar
-
-# 5. Ingest sample PDF
-curl -s -X POST 'localhost:8080/api/ingest?path=sample-docs/infra-codebase.pdf'
-
-# 6. Query — pipeline (LCEL-equivalent baseline)
-curl -s -X POST localhost:8080/api/rag/query/pipeline \
-  -H 'Content-Type: application/json' \
-  -d '{"question": "What does the infrastructure codebase do?"}'
-
-# 7. Query — agentic (ToolishRag)
-curl -s -X POST localhost:8080/api/rag/query \
-  -H 'Content-Type: application/json' \
-  -d '{"question": "What does the infrastructure codebase do?"}'
+```powershell
+rtk proxy mvn spring-boot:run
 ```
 
-## Project Structure
+The HTTP port defaults to `8000` (`API_PORT`). Health is at `http://localhost:8000/actuator/health`; Prometheus metrics at `/actuator/prometheus`. See [local observability](docker/observability/README.md) for the laptop telemetry stack. The `work` profile uses workplace provider configuration.
 
-```
-RAG_Embabel-AI/
-├── .github/copilot-instructions.md
-├── docs/
-│   ├── PLAN.md
-│   └── architecture.md
-├── sample-docs/            ← add infra-codebase.pdf here (gitignored)
-├── src/main/kotlin/com/dex/ragpoc/
-│   ├── RagPocApplication.kt
-│   ├── config/
-│   ├── ingestion/
-│   ├── rag/
-│   ├── adapter/
-│   └── model/
-├── src/test/kotlin/com/dex/ragpoc/
-├── docker/docker-compose.yml
-├── pom.xml
-├── .env.example
-└── .gitignore
+## Ingestion
+
+Set `INGESTION_ALLOWED_ROOTS` to comma-separated absolute directories containing documents. An empty value rejects all sources. `POST /ingest` checks workspace membership before resolving a path, rejects sources outside approved roots with a safe 422 response, and scans supported files in stable order. `recursive` controls nested directories.
+
+```json
+{"source_path":"C:/documents/guide.pdf","dry_run":true}
 ```
 
-## Endpoints
+`source_path` is required. Optional fields are `recursive`, `workspace_id`, `chunking_profile`, `model_profile`, and `dry_run`. The response reports `indexed`, selected profiles, `dry_run`, and a `documents` array with `doc_id`, `source_path`, `chunks_indexed`, `skipped`, `skip_reason`, and `assets_found`.
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/ingest?path=...` | Ingest a PDF from classpath |
-| `POST` | `/api/rag/query` | Agentic query via ToolishRag |
-| `POST` | `/api/rag/query/pipeline` | Fixed pipeline baseline (LCEL-equivalent) |
+A dry run parses and chunks without provider calls, database operations, or asset writes. A real run requires a ready model profile and persists vectors to its storage target. Unchanged documents are skipped without embedding or replacement writes. Supported types include text, Markdown, HTML, PDF, DOCX, and source/config files; PPTX is planned as RDP-16.
 
-## Hypotheses
+Application ingestion INFO logs report stages, counts, and elapsed times, omitting paths, IDs, and document text. DOCX library source-path logging is tracked separately as LOG-01.
 
-See `docs/architecture.md` for the hypothesis log (H1–H5).
+## HTTP APIs
 
-## Definition of Done
+| Method | Path | Behavior |
+| --- | --- | --- |
+| POST | `/ingest` | Authorized file/directory ingestion or dry-run planning |
+| POST | `/chat` | Grounded answer with citations and optional debug data |
+| POST | `/chat/stream` | SSE answer deltas, metadata, completion, and error events |
+| GET | `/workspaces` | Accessible workspaces |
+| GET | `/chat/sessions?workspaceId=...` | List workspace sessions |
+| GET | `/chat/sessions/{sessionId}` | Session details and turns |
+| PATCH | `/chat/sessions/{sessionId}` | Rename a session |
+| DELETE | `/chat/sessions/{sessionId}` | Archive a session |
+| GET | `/workspaces/{workspaceId}/assets/{assetId}` | Authorized asset read with ETag support |
 
-- [ ] `mvn clean verify` green
-- [ ] Both endpoints return HTTP 200 on same question
-- [ ] `ResultsListener` logs ≥1 event per agentic query
-- [ ] All 5 hypotheses recorded in `docs/architecture.md`
-- [ ] No deprecated `RagService` usage
+For chat, send `{"question":"What does the document describe?"}`. Optional fields are `topK`, `includeDebug`, `sessionId`, `workspaceId`, `chunkingProfile`, and `modelProfile`. Sessions and assets enforce access checks. See [API and evaluation contract](docs/api_evaluation_contract.md).
+
+## Development
+
+With the workspace Maven environment configured:
+
+```powershell
+rtk proxy mvn spotless:apply
+rtk proxy mvn test
+```
+
+The normal suite uses offline fixtures and mocks. Live provider/database checks require explicit opt-in and controlled fixture workspaces. Source lives under `src/main/kotlin/com/dex/ragpoc/`, tests under `src/test/kotlin/com/dex/ragpoc/`.
+
+See [architecture](docs/architecture.md), [delivery plan](docs/PLAN.md), [current phase](docs/work_current_phase.md), and [backlog](docs/next_phase.md) for evidence and remaining work.

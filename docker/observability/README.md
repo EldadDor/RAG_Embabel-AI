@@ -1,6 +1,6 @@
 # Local observability
 
-Start the stack after the Kotlin service is available at `http://localhost:8080`:
+Start the stack after the Kotlin service is available at `http://localhost:8000`:
 
 ```powershell
 docker compose -f docker/docker-compose-observability.yml up -d
@@ -12,12 +12,12 @@ The service sends OTLP metrics and traces to `http://10.100.102.12:4318` by defa
 | --- | --- |
 | Grafana | `http://localhost:3300` (`admin` / `admin`) |
 | Prometheus | `http://localhost:9090` |
-| Tempo | `http://localhost:3200` |
-| Collector diagnostics | `http://localhost:8888/metrics` |
+| Tempo | `http://localhost:13200` |
+| Collector diagnostics | `http://localhost:18888/metrics` |
 
 Set `OTEL_METRICS_ENABLED=false` to disable OTLP metric export. The Prometheus endpoint remains available. `LANGFUSE_ENABLED` defaults to `false` and no Langfuse service is part of this stack.
 
-Grafana provisions the **RAG Service** dashboard from `grafana/provisioning/dashboards/json/rag-service.json`. It shows HTTP throughput/status, chat and retrieval latency, operation outcomes, streaming first-token time, embedding cache hits, retrieval candidates, and ingestion counts. Panels remain empty until the corresponding operation runs; ingestion is not exposed as a normal runtime endpoint yet. Spring Boot supplies HTTP and connection-pool meters, while `rag_*` meters use fixed operation/outcome labels only. No prompts, paths, workspace/session IDs, or provider responses are included in metric labels or default span attributes.
+Grafana provisions the **RAG Service** dashboard from `grafana/provisioning/dashboards/json/rag-service.json`. It shows HTTP throughput/status, chat and retrieval latency, operation outcomes, streaming first-token time, embedding cache hits, retrieval candidates, and ingestion counts. Panels remain empty until the corresponding operation runs; the authorized `POST /ingest` endpoint emits ingestion metrics during user-run requests. Spring Boot supplies HTTP and connection-pool meters, while `rag_*` meters use fixed operation/outcome labels only. No prompts, paths, workspace/session IDs, or provider responses are included in metric labels or default span attributes.
 
 After changing `prometheus.yml`, reload or restart Prometheus on the laptop; this repository does not manage its Docker lifecycle.
 
