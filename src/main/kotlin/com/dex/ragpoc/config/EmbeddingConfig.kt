@@ -13,8 +13,6 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class EmbeddingConfig {
     @Bean
-    fun embeddingGateway(
-        properties: AppProperties,
-        embeddings: ProfiledEmbeddingService,
-    ): EmbeddingGateway = EmbeddingGateway { texts -> texts.map { embeddings.document(properties.rag.modelProfile, it) } }
+    fun embeddingGateway(embeddings: ProfiledEmbeddingService): EmbeddingGateway =
+        EmbeddingGateway { profile, texts -> texts.map { embeddings.document(profile, it) } }
 }

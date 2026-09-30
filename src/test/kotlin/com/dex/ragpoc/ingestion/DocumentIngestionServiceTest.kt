@@ -39,6 +39,101 @@ class DocumentIngestionServiceTest {
     lateinit var temporaryDirectory: Path
 
     @Test
+    fun `directory dry run is deterministic and respects recursion without persistence`() {
+        val root = Files.createDirectory(temporaryDirectory.resolve("sources"))
+        Files.writeString(root.resolve("b.txt"), "Second")
+        Files.writeString(root.resolve("a.txt"), "First")
+        Files.writeString(root.resolve("ignored.bin"), "Ignored")
+        val nested = Files.createDirectory(root.resolve("nested"))
+        Files.writeString(nested.resolve("c.txt"), "Third")
+        val sourceDocuments = mockk<JdbcSourceDocumentRepository>()
+        val service =
+            DocumentIngestionService(
+                DocumentLoaderRegistry(),
+                DocumentChunker(),
+                EmbeddingGateway { _, _ -> error("Dry runs must not embed") },
+                ContentAddressedAssetStore(AppProperties()),
+                sourceDocuments,
+                mockk(),
+                mockk(),
+                AppProperties(),
+                transactionTemplate(),
+                modelTargets = IngestionModelTargetResolver { error("Dry runs must not resolve model profiles") },
+            )
+
+        val nonRecursive = service.ingestPath(IngestionRequest("workspace", root, dryRun = true))
+        assertEquals(listOf("a.txt", "b.txt"), nonRecursive.documents.map { Path.of(it.sourcePath).fileName.toString() })
+        assertEquals(2, nonRecursive.indexed)
+        assertTrue(nonRecursive.documents.all { !it.skipped })
+        val recursive = service.ingestPath(IngestionRequest("workspace", root, dryRun = true), recursive = true)
+        assertEquals(listOf("a.txt", "b.txt", "c.txt"), recursive.documents.map { Path.of(it.sourcePath).fileName.toString() })
+        assertEquals(3, recursive.indexed)
+        verify(exactly = 0) { sourceDocuments.find(any(), any(), any()) }
+    }
+
+    @Test
+    fun `empty document is reported as skipped and unsupported single file is rejected`() {
+        val empty = Files.writeString(temporaryDirectory.resolve("empty.txt"), "")
+        val unsupported = Files.writeString(temporaryDirectory.resolve("other.bin"), "binary")
+        val service =
+            DocumentIngestionService(
+                DocumentLoaderRegistry(),
+                DocumentChunker(),
+                EmbeddingGateway { _, _ -> error("Dry runs must not embed") },
+                ContentAddressedAssetStore(AppProperties()),
+                mockk(),
+                mockk(),
+                mockk(),
+                AppProperties(),
+                transactionTemplate(),
+            )
+
+        val result = service.ingestPath(IngestionRequest("workspace", empty, dryRun = true))
+        assertEquals(0, result.indexed)
+        assertEquals("empty", result.documents.single().skipReason)
+        assertTrue(result.documents.single().skipped)
+        assertFailsWith<DocumentLoadFailure> {
+            service.ingestPath(IngestionRequest("workspace", unsupported, dryRun = true))
+        }
+    }
+
+    @Test
+    fun `selected model profile controls embedding and storage target`() {
+        val source = Files.writeString(temporaryDirectory.resolve("profile.txt"), "Profiled content")
+        val sourceDocuments = mockk<JdbcSourceDocumentRepository>(relaxed = true)
+        every { sourceDocuments.find("workspace", "default", any()) } returns null
+        val chunks = mockk<JdbcChunkRepository>(relaxed = true)
+        val properties = AppProperties(database = AppProperties.Database(vectorDimension = 3))
+        val service =
+            DocumentIngestionService(
+                DocumentLoaderRegistry(),
+                DocumentChunker(),
+                EmbeddingGateway { profile, texts ->
+                    assertEquals("alternate", profile)
+                    texts.map { listOf(0.1f, 0.2f, 0.3f) }
+                },
+                ContentAddressedAssetStore(properties),
+                sourceDocuments,
+                chunks,
+                mockk(relaxed = true),
+                properties,
+                transactionTemplate(),
+                modelTargets =
+                    IngestionModelTargetResolver { profile ->
+                        assertEquals("alternate", profile)
+                        IngestionModelTarget("document_chunks_alternate", 3)
+                    },
+            )
+
+        val result = service.ingestPath(IngestionRequest("workspace", source, modelProfile = "alternate"))
+        assertEquals("alternate", result.modelProfile)
+        assertEquals(1, result.indexed)
+        verify { chunks.deleteForDocument("workspace", "default", result.documents.single().documentId!!, "document_chunks_alternate") }
+        verify { chunks.upsert(any(), any(), "document_chunks_alternate", 3) }
+        verify { sourceDocuments.upsert(match { it.metadata["model_profile"] == "alternate" }) }
+    }
+
+    @Test
     fun `dry run plans chunks without embedding or persistence`() {
         val source = Files.writeString(temporaryDirectory.resolve("guide.txt"), "A short guide.")
         val document = Document("guide", source.toString(), SourceType.TEXT, "A short guide.")
@@ -49,7 +144,7 @@ class DocumentIngestionServiceTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(mapOf(".txt" to DocumentLoader { document })),
                 DocumentChunker(),
-                EmbeddingGateway { error("Dry runs must not embed") },
+                EmbeddingGateway { _, _ -> error("Dry runs must not embed") },
                 ContentAddressedAssetStore(
                     AppProperties(assets = AppProperties.Assets(storageRoot = temporaryDirectory.resolve("assets"))),
                 ),
@@ -92,7 +187,7 @@ class DocumentIngestionServiceTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(),
                 DocumentChunker(),
-                EmbeddingGateway { emptyList() },
+                EmbeddingGateway { _, _ -> emptyList() },
                 ContentAddressedAssetStore(AppProperties()),
                 sourceDocuments,
                 chunks,
@@ -113,14 +208,23 @@ class DocumentIngestionServiceTest {
         val document = Document("same", source.toString(), SourceType.TEXT, "Same content")
         val sourceDocuments = mockk<JdbcSourceDocumentRepository>()
         every { sourceDocuments.find("workspace", "default", "same") } returns
-            SourceDocument("workspace", "default", "same", null, source.toString(), SourceType.TEXT, hash(document.content))
+            SourceDocument(
+                "workspace",
+                "default",
+                "same",
+                null,
+                source.toString(),
+                SourceType.TEXT,
+                hash(document.content),
+                mapOf("model_profile" to "bge-m3"),
+            )
         val chunks = mockk<JdbcChunkRepository>(relaxed = true)
         val assets = mockk<JdbcDocumentAssetRepository>(relaxed = true)
         val service =
             DocumentIngestionService(
                 DocumentLoaderRegistry(mapOf(".txt" to DocumentLoader { document })),
                 DocumentChunker(),
-                EmbeddingGateway { error("Unchanged sources must not embed") },
+                EmbeddingGateway { _, _ -> error("Unchanged sources must not embed") },
                 ContentAddressedAssetStore(AppProperties()),
                 sourceDocuments,
                 chunks,
@@ -130,7 +234,7 @@ class DocumentIngestionServiceTest {
             )
 
         assertEquals(
-            IngestionResult("same", changed = false, dryRun = false, chunkCount = 0, assetCount = 0),
+            IngestionResult("same", changed = false, dryRun = false, chunkCount = 0, assetCount = 0, skipReason = "unchanged"),
             service.ingest(IngestionRequest("workspace", source)),
         )
         verify(exactly = 0) { chunks.deleteForDocument(any(), any(), any()) }
@@ -160,7 +264,7 @@ class DocumentIngestionServiceTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(),
                 DocumentChunker(),
-                EmbeddingGateway {
+                EmbeddingGateway { _, _ ->
                     emptyList()
                 },
                 ContentAddressedAssetStore(AppProperties()),
@@ -188,7 +292,7 @@ class DocumentIngestionServiceTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(),
                 DocumentChunker(),
-                EmbeddingGateway { error("embedding unavailable") },
+                EmbeddingGateway { _, _ -> error("embedding unavailable") },
                 ContentAddressedAssetStore(AppProperties()),
                 sourceDocuments,
                 chunks,
@@ -197,7 +301,7 @@ class DocumentIngestionServiceTest {
                 transactionTemplate(),
             )
 
-        assertFailsWith<IllegalStateException> { service.ingest(IngestionRequest("workspace", source)) }
+        assertFailsWith<IngestionProviderException> { service.ingest(IngestionRequest("workspace", source)) }
         verify(exactly = 0) { chunks.deleteForDocument(any(), any(), any()) }
         verify(exactly = 0) { sourceDocuments.upsert(any()) }
     }
@@ -218,7 +322,7 @@ class DocumentIngestionServiceTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(),
                 DocumentChunker(),
-                EmbeddingGateway { texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
+                EmbeddingGateway { _, texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
                 ContentAddressedAssetStore(
                     properties.copy(assets = AppProperties.Assets(storageRoot = temporaryDirectory.resolve("assets"))),
                 ),
@@ -266,7 +370,7 @@ class DocumentIngestionServiceTest {
         every { sourceDocuments.find("workspace", "default", "guide") } returns null
         val storedChunks = mutableListOf<StoredChunk>()
         val chunks = mockk<JdbcChunkRepository>(relaxed = true)
-        every { chunks.upsert(capture(storedChunks), any()) } returns Unit
+        every { chunks.upsert(capture(storedChunks), any(), any(), any()) } returns Unit
         val assets = mockk<JdbcDocumentAssetRepository>(relaxed = true)
         val linkedChunk = slot<String>()
         every { assets.linkToChunk(any(), any(), any(), capture(linkedChunk), any(), any()) } returns Unit
@@ -275,7 +379,7 @@ class DocumentIngestionServiceTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(mapOf(".txt" to DocumentLoader { document })),
                 DocumentChunker(mapOf("default" to ChunkingProfile(chunkSize = 12, chunkOverlap = 1))),
-                EmbeddingGateway { texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
+                EmbeddingGateway { _, texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
                 ContentAddressedAssetStore(
                     properties.copy(assets = AppProperties.Assets(storageRoot = temporaryDirectory.resolve("assets"))),
                 ),
@@ -310,7 +414,7 @@ class DocumentIngestionServiceTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(),
                 DocumentChunker(),
-                EmbeddingGateway { texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
+                EmbeddingGateway { _, texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
                 ContentAddressedAssetStore(properties),
                 sourceDocuments,
                 chunks,
@@ -326,7 +430,7 @@ class DocumentIngestionServiceTest {
             assertTrue(result.chunkCount > 0, name)
         }
         verify(exactly = sources.size) { sourceDocuments.upsert(any()) }
-        verify(atLeast = sources.size) { chunks.upsert(any(), any()) }
+        verify(atLeast = sources.size) { chunks.upsert(any(), any(), any(), any()) }
     }
 
     @Test
@@ -339,13 +443,13 @@ class DocumentIngestionServiceTest {
         val storedDocument = slot<SourceDocument>()
         val storedChunk = slot<StoredChunk>()
         every { sourceDocuments.upsert(capture(storedDocument)) } returns Unit
-        every { chunks.upsert(capture(storedChunk), any()) } returns Unit
+        every { chunks.upsert(capture(storedChunk), any(), any(), any()) } returns Unit
         val properties = AppProperties(database = AppProperties.Database(vectorDimension = 3))
         val service =
             DocumentIngestionService(
                 DocumentLoaderRegistry(),
                 DocumentChunker(),
-                EmbeddingGateway { texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
+                EmbeddingGateway { _, texts -> texts.map { listOf(0.1f, 0.2f, 0.3f) } },
                 ContentAddressedAssetStore(properties),
                 sourceDocuments,
                 chunks,

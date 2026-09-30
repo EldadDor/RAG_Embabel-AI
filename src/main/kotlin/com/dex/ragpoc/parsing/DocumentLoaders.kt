@@ -50,25 +50,10 @@ class DocumentLoaderRegistry(
         recursive: Boolean = false,
         maxBytes: Long = DEFAULT_MAX_DOCUMENT_BYTES,
     ): Pair<List<Document>, List<SkippedDocument>> {
-        require(Files.isDirectory(directory)) { "Path is not a directory: $directory" }
-        val paths =
-            (if (recursive) Files.walk(directory) else Files.list(directory))
-                .use { stream ->
-                    stream
-                        .filter(Files::isRegularFile)
-                        .filter { path ->
-                            directory
-                                .relativize(path)
-                                .iterator()
-                                .asSequence()
-                                .none { segment -> segment.toString() in EXCLUDED_DIRECTORY_NAMES }
-                        }.sorted()
-                        .collect(Collectors.toList())
-                }
+        val paths = scanDirectory(directory, recursive)
         val documents = mutableListOf<Document>()
         val skipped = mutableListOf<SkippedDocument>()
         for (path in paths) {
-            if (extension(path) !in loaders) continue
             try {
                 documents += loadDocument(path, maxBytes)
             } catch (error: Exception) {
@@ -76,6 +61,27 @@ class DocumentLoaderRegistry(
             }
         }
         return documents to skipped
+    }
+
+    fun scanDirectory(
+        directory: Path,
+        recursive: Boolean = false,
+    ): List<Path> {
+        require(Files.isDirectory(directory)) { "Path is not a directory: $directory" }
+        return (if (recursive) Files.walk(directory) else Files.list(directory))
+            .use { stream ->
+                stream
+                    .filter(Files::isRegularFile)
+                    .filter { extension(it) in loaders }
+                    .filter { path ->
+                        directory
+                            .relativize(path)
+                            .iterator()
+                            .asSequence()
+                            .none { segment -> segment.toString() in EXCLUDED_DIRECTORY_NAMES }
+                    }.sorted()
+                    .collect(Collectors.toList())
+            }
     }
 
     companion object {

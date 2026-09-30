@@ -15,6 +15,7 @@ data class AppProperties(
     val telemetry: Telemetry = Telemetry(),
     val chat: Chat = Chat(),
     val embedding: Embedding = Embedding(),
+    val ingestion: Ingestion = Ingestion(),
 ) {
     data class Auth(
         val mode: String = "local",
@@ -89,5 +90,9 @@ data class AppProperties(
         val timeoutSeconds: Long = 120,
         val concurrency: Int = 8,
         val cacheEnabled: Boolean = true,
+    )
+
+    data class Ingestion(
+        val allowedRoots: List<Path> = emptyList(),
     )
 }

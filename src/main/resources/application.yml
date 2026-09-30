@@ -96,6 +96,8 @@ app:
     max-image-bytes: ${ASSET_MAX_IMAGE_BYTES:15728640}
     max-images-per-document: ${ASSET_MAX_IMAGES_PER_DOCUMENT:100}
     max-total-bytes-per-document: ${ASSET_MAX_TOTAL_BYTES_PER_DOCUMENT:104857600}
+  ingestion:
+    allowed-roots: ${INGESTION_ALLOWED_ROOTS:}
   memory:
     max-turns: ${MEMORY_MAX_TURNS:10}
     retention-days: ${MEMORY_RETENTION_DAYS:90}

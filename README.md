@@ -1,12 +1,18 @@
 # RAG_Embabel-AI
 
-Kotlin/Spring Boot service being built for backend parity with RAG-dev-plane. Document loading, chunking, private assets, JDBC interoperability, and an ingestion service are implemented. HTTP parity endpoints are still planned.
+Kotlin/Spring Boot service being built for backend parity with RAG-dev-plane. Document loading, chunking, private assets, JDBC interoperability, and the current ingestion and chat HTTP endpoints are implemented.
 
 ## Current local run
 
 Use the `local` Spring profile, which is also the default in `application.yml`. Supply the environment variables needed by your local PostgreSQL and model services, then run `rtk proxy mvn spring-boot:run` with the workspace Maven environment described in [the repository instructions](.codex/AGENTS.md). The HTTP port defaults to `8000` (`API_PORT`). Check `http://localhost:8000/actuator/health`.
 
-`local,legacy-poc` does not expose `POST /api/ingest`: the old PDF controller requires both `legacy-poc` and `vector-store-poc`. The RDP-09 ingestion service currently has no HTTP controller. Adding `vector-store-poc` selects the obsolete Spring AI `VectorStore` path, which has no active store bean in the current configuration. The old `/api/rag/query` routes have the same profile restriction. PPTX support is planned as a later task, RDP-16.
+`POST /ingest` is the active JDBC ingestion route. Before starting the service for an ingestion test, set `INGESTION_ALLOWED_ROOTS` to one or more comma-separated absolute directories that contain the source documents. An empty value rejects all sources. The route checks workspace membership before resolving the path; directory scans include supported files in stable path order, and `recursive` controls nested directories. A source outside an allowed root receives a safe 422 response. See [application-example.yml](application-example.yml) for the equivalent YAML setting. PPTX support is planned as RDP-16.
+
+The JSON request uses Python field names: `source_path` is required; `recursive`, `workspace_id`, `chunking_profile`, `model_profile`, and `dry_run` are optional. For example, a Windows source can be sent as `{"source_path":"C:/documents/guide.pdf","dry_run":true}`. The response reports `indexed`, selected profiles, `dry_run`, and a `documents` array with `doc_id`, `source_path`, `chunks_indexed`, `skipped`, `skip_reason`, and `assets_found`. A dry run parses and chunks without provider or database calls or asset writes. A non-dry run requires a ready model profile and writes vectors to that profile's storage target. The user will run and accept the controlled real ingestion check before testing chat.
+
+The active ingestion service writes INFO logs for batch start/completion and document load, chunking, embedding, and persistence stages, including counts and elapsed times. It omits source paths, document IDs, workspace IDs, and document text. An unchanged repeat logs a skip and does not embed or write again.
+
+`local,legacy-poc` does not expose `POST /api/ingest`: the old PDF controller requires both `legacy-poc` and `vector-store-poc`. Adding `vector-store-poc` selects the obsolete Spring AI `VectorStore` path, which has no active store bean in the current configuration. The old `/api/rag/query` routes have the same profile restriction.
 
 The historical proof-of-concept instructions below are retained for reference and do not describe the current runtime.
 

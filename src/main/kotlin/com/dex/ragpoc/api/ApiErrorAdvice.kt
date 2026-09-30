@@ -5,6 +5,7 @@ import com.dex.ragpoc.asset.UnsupportedAssetMediaTypeException
 import com.dex.ragpoc.chat.ChatProviderException
 import com.dex.ragpoc.conversation.SessionNotFoundException
 import com.dex.ragpoc.identity.AuthenticationRequiredException
+import com.dex.ragpoc.ingestion.IngestionProviderException
 import com.dex.ragpoc.workspace.WorkspaceAccessDeniedException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -36,6 +37,10 @@ class ApiErrorAdvice {
     @ExceptionHandler(ChatProviderException::class)
     fun chatProviderFailure() =
         error(HttpStatus.BAD_GATEWAY, "upstream_provider_error", "The chat provider could not complete the request.")
+
+    @ExceptionHandler(IngestionProviderException::class)
+    fun ingestionProviderFailure() =
+        error(HttpStatus.BAD_GATEWAY, "upstream_provider_error", "The embedding provider could not complete the request.")
 
     @ExceptionHandler(MethodArgumentNotValidException::class, HandlerMethodValidationException::class, IllegalArgumentException::class)
     fun invalidRequest() = error(HttpStatus.UNPROCESSABLE_ENTITY, "invalid_request", "The request is invalid.")

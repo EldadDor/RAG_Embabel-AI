@@ -532,11 +532,14 @@ class JdbcChunkRepository(
     fun upsert(
         chunk: StoredChunk,
         embedding: List<Float>,
+        storageTarget: String = chunkTable,
+        expectedDimensions: Int = dimensions,
     ) {
-        require(embedding.size == dimensions) { "Chunk embedding dimension does not match the configured model profile" }
+        require(embedding.size == expectedDimensions) { "Chunk embedding dimension does not match the selected model profile" }
+        val table = requireIdentifier("model profile storage target", storageTarget)
         jdbcTemplate.update(
             """
-            INSERT INTO $schema.$chunkTable (id, content, metadata, embedding, source, page_number, chunk_index)
+            INSERT INTO $schema.$table (id, content, metadata, embedding, source, page_number, chunk_index)
             VALUES (?, ?, ?::jsonb, ?::vector, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE
             SET content = EXCLUDED.content,
@@ -562,9 +565,13 @@ class JdbcChunkRepository(
         workspaceId: String,
         chunkingProfile: String,
         documentId: String,
+        storageTarget: String = chunkTable,
     ): Int =
         jdbcTemplate.update(
-            "DELETE FROM $schema.$chunkTable WHERE metadata ->> 'workspace_id' = ? AND metadata ->> 'chunking_profile' = ? AND metadata ->> 'document_id' = ?",
+            "DELETE FROM $schema.${requireIdentifier(
+                "model profile storage target",
+                storageTarget,
+            )} WHERE metadata ->> 'workspace_id' = ? AND metadata ->> 'chunking_profile' = ? AND metadata ->> 'document_id' = ?",
             workspaceId,
             chunkingProfile,
             documentId,

@@ -14,7 +14,7 @@
 | Safe errors | Validation gives the safe 422 envelope. Provider failure gives the safe 502 envelope and never exposes cause text. Cover authorization, missing resource, and unsupported asset media with their mapped errors. |
 | Sessions | List by authorized workspace; read, rename, and archive owned active sessions. A foreign, missing, or archived session has the same masked 404 outcome. |
 | Workspaces and identity | Local principal is server-derived. Gateway mode requires trusted identity. Workspace membership is checked for every workspace-scoped operation. |
-| Ingestion | `POST /ingest` accepts source path, recursive flag, optional workspace/profile, and dry run. Cover missing path, invalid profile, dry run purity, skipped/unchanged documents, and result shape. |
+| Ingestion | `POST /ingest` accepts snake-case `source_path`, `recursive`, `workspace_id`, `chunking_profile`, `model_profile`, and `dry_run`; it returns total `indexed` and per-document ID/path/chunk/skip/asset fields. Workspace membership is checked before path admission, and configured allowed roots bound the source. Cover invalid/outside paths, invalid profile syntax, dry run purity, deterministic recursive scans, selected model storage target, unchanged documents, and result shape. |
 | Assets | `GET /workspaces/{workspaceId}/assets/{assetId}` requires membership; permits PNG/JPEG/GIF/WebP only after byte-signature validation; supports ETag/304 and private, inline, `nosniff` headers. |
 | Model-profile warmer | Local-only endpoint honors workspace authorization and dry run; non-local environments reject it. |
 

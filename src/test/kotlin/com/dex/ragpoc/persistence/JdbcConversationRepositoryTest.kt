@@ -2,8 +2,11 @@ package com.dex.ragpoc.persistence
 
 import com.dex.ragpoc.config.AppProperties
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.jdbc.core.JdbcTemplate
 import java.util.UUID
@@ -41,6 +44,21 @@ class JdbcConversationRepositoryTest {
                 StoredChunk(UUID.randomUUID(), "fixture content", mapOf("document_id" to "fixture-doc")),
                 listOf(0.0f),
             )
+        }
+    }
+
+    @Test
+    fun `selected storage target is validated and used for chunk writes`() {
+        val jdbc = mockk<JdbcTemplate>()
+        val sql = slot<String>()
+        every { jdbc.update(capture(sql), *anyVararg()) } returns 1
+        val chunks = JdbcChunkRepository(jdbc, ObjectMapper(), AppProperties())
+        val chunk = StoredChunk(UUID.randomUUID(), "fixture content", mapOf("document_id" to "fixture-doc"))
+
+        chunks.upsert(chunk, listOf(0.1f, 0.2f, 0.3f), "document_chunks_alternate", 3)
+        assertTrue(sql.captured.contains("INSERT INTO rag.document_chunks_alternate"))
+        assertThrows(IllegalArgumentException::class.java) {
+            chunks.upsert(chunk, listOf(0.1f, 0.2f, 0.3f), "other;drop", 3)
         }
     }
 

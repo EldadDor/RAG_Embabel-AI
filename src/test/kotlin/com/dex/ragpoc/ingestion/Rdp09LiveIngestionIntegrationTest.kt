@@ -212,7 +212,7 @@ class Rdp09LiveIngestionIntegrationTest {
             DocumentIngestionService(
                 DocumentLoaderRegistry(mapOf(".txt" to DocumentLoader { document })),
                 DocumentChunker(),
-                EmbeddingGateway { texts -> texts.map { embeddingModel.embed(it).toList() } },
+                EmbeddingGateway { _, texts -> texts.map { embeddingModel.embed(it).toList() } },
                 ContentAddressedAssetStore(rollbackProperties),
                 sourceDocuments,
                 chunks,
@@ -239,7 +239,7 @@ class Rdp09LiveIngestionIntegrationTest {
     }
 
     private fun ingestionService(
-        embeddingGateway: EmbeddingGateway = EmbeddingGateway { texts -> texts.map { embeddingModel.embed(it).toList() } },
+        embeddingGateway: EmbeddingGateway = EmbeddingGateway { _, texts -> texts.map { embeddingModel.embed(it).toList() } },
         assetProperties: AppProperties = properties,
     ) = DocumentIngestionService(
         DocumentLoaderRegistry(),

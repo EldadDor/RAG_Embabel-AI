@@ -1,0 +1,5 @@
+# Example override for the active POST /ingest route. This file is not loaded automatically.
+app:
+  ingestion:
+    allowed-roots:
+      - C:/path/to/documents

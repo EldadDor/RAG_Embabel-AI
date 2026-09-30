@@ -2,11 +2,19 @@ package com.dex.ragpoc.config
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
 
 class AppPropertiesTest {
+    @Test
+    fun `empty ingestion roots remain closed`() {
+        val source = MapConfigurationPropertySource(mapOf("app.ingestion.allowed-roots" to ""))
+        val properties = Binder(source).bind("app", AppProperties::class.java).get()
+        assertTrue(properties.ingestion.allowedRoots.isEmpty())
+    }
+
     @Test
     fun `binds Python-compatible settings from standard Spring property names`() {
         val source =
@@ -22,6 +30,7 @@ class AppPropertiesTest {
                     "app.rag.chunk-size" to "800",
                     "app.rag.chunk-overlap" to "120",
                     "app.assets.storage-root" to ".rag-assets",
+                    "app.ingestion.allowed-roots" to "C:/documents,D:/shared",
                     "app.observability.langfuse-enabled" to "false",
                 ),
             )
@@ -38,6 +47,7 @@ class AppPropertiesTest {
         assertEquals(800, properties.rag.chunkSize)
         assertEquals(120, properties.rag.chunkOverlap)
         assertEquals(".rag-assets", properties.assets.storageRoot.toString())
+        assertEquals(listOf("C:\\documents", "D:\\shared"), properties.ingestion.allowedRoots.map { it.toString() })
         assertFalse(properties.observability.langfuseEnabled)
     }
 }
