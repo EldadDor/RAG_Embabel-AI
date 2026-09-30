@@ -96,6 +96,7 @@ class DocumentLoaderRegistry(
                 ".htm" to HtmlDocumentLoader,
                 ".pdf" to PdfDocumentLoader,
                 ".docx" to WordDocumentLoader,
+                ".pptx" to PowerPointDocumentLoader(),
                 ".py" to CodeDocumentLoader,
                 ".js" to CodeDocumentLoader,
                 ".jsx" to CodeDocumentLoader,

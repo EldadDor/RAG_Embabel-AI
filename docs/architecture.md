@@ -31,7 +31,7 @@ RAG-dev-plane owns `rag.schema_migrations` and the five applied migration versio
 
 DOCX handling is a parser boundary completed before ingestion. It uses docx4j with a JDK 25-compatible JAXB runtime to produce ordered text blocks and extracted image metadata/bytes. Ingestion consumes that parsed result and persists assets and chunk links only after parsing fixtures pass.
 
-PPTX is a later RDP-16 extension, outside the Python parity sequence and not a prerequisite for RDP-10. The proposed loader uses Apache POI XSLF to preserve slide order, text/table structure, and slide provenance; extracted images use the same private asset and chunk-link model as DOCX. Package safety and dependency compatibility are checked before implementation.
+RDP-16 adds PPTX through Apache POI XSLF with bounded ZIP/XML validation, stored shape order, tables, existing notes, and slide provenance. Each slide is chunked independently; page_number represents its slide number. Embedded PNG/JPEG/GIF images use private assets and same-slide chunk links. SourceType.UNKNOWN with document_format=pptx metadata preserves shared-schema compatibility without a migration. Linked images, rendering, OCR, and charts are excluded.
 
 Document loading also preserves source-file language for code and configuration files. The chunking layer uses recursive text splitting with an 800-character size and 120-character overlap by default, with named profiles for alternate recursive settings. Bundled Tree-sitter grammars extract Python, Java, and Kotlin declarations and line ranges; malformed Java/Kotlin falls back to generic splitting. Chunk IDs include the document ID, profile name when nondefault, and chunk index. Persistence wiring remains part of RDP-09.
 

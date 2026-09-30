@@ -48,3 +48,7 @@ The Kotlin evaluation runner performs each retrieval twice and records determini
 | `evaluation/*.jsonl` | Retrieval and generated-answer quality regression coverage. |
 
 RDP-06 through RDP-09 add the document/ingestion fixtures. RDP-11 through RDP-14 add model, retrieval, streaming, telemetry, resilience, and storage evidence.
+
+## PPTX ingestion (RDP-16)
+
+The existing POST /ingest route and supported-extension reporting include .pptx. Request and response schemas remain unchanged. Dry runs include slide-local chunks and embedded image counts without provider/database/asset writes. Slide numbers populate citation page numbers; hidden slides and existing speaker notes are included. Embedded PNG/JPEG/GIF pictures use private assets; external pictures are never fetched. Unsafe or unsupported presentation packages use the existing safe invalid-request handling.

@@ -61,7 +61,7 @@ class DocumentChunker(
                     text = segment.text.trim(),
                     chunkIndex = index,
                     title = document.title,
-                    page = document.metadata["page"] as? Int,
+                    page = chunkMetadata["slide_number"] as? Int ?: document.metadata["page"] as? Int,
                     section = chunkMetadata["section"] as? String ?: document.metadata["section"] as? String,
                     metadata =
                         document.metadata + chunkMetadata +
@@ -82,6 +82,26 @@ class DocumentChunker(
         profile: ChunkingProfile,
     ): List<TextSegment> {
         val splitter = RecursiveTextSplitter(profile.chunkSize, profile.chunkOverlap)
+        if (document.metadata["document_format"] == "pptx") {
+            val slides = document.metadata["slides"] as? List<*> ?: error("Presentation slide metadata is missing")
+            return slides.flatMap { value ->
+                val slide = value as Map<*, *>
+                val start = slide["start_index"] as Int
+                val end = slide["end_index"] as Int
+                splitter.split(document.content.substring(start, end)).map { segment ->
+                    segment.copy(
+                        startIndex = segment.startIndex?.plus(start),
+                        endIndex = segment.endIndex?.plus(start),
+                        metadata =
+                            mapOf(
+                                "slide_number" to slide["slide_number"],
+                                "section" to slide["section"],
+                                "hidden" to slide["hidden"],
+                            ),
+                    )
+                }
+            }
+        }
         if (document.sourceType != SourceType.MARKDOWN) return splitter.split(document.content)
         val sections = markdownSections(document.content)
         if (sections.isEmpty()) return splitter.split(document.content)

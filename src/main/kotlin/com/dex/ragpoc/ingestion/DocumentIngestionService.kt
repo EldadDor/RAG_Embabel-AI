@@ -421,12 +421,18 @@ class DocumentIngestionService(
         preparedChunks: List<Chunk>,
     ): Chunk? {
         if (preparedChunks.isEmpty()) return null
+        val candidates =
+            if (preparedChunks.first().metadata["document_format"] == "pptx") {
+                preparedChunks.filter { it.section == asset.section }
+            } else {
+                preparedChunks
+            }
         val sourceIndex = asset.sourceIndex ?: 0
-        return preparedChunks.firstOrNull { chunk ->
+        return candidates.firstOrNull { chunk ->
             val start = chunk.metadata["start_index"] as? Int
             val end = chunk.metadata["end_index"] as? Int
             start != null && end != null && sourceIndex in start..end
-        } ?: preparedChunks.minByOrNull { chunk ->
+        } ?: candidates.minByOrNull { chunk ->
             abs((chunk.metadata["start_index"] as? Int ?: 0) - sourceIndex)
         }
     }

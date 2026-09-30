@@ -36,7 +36,7 @@ Set `INGESTION_ALLOWED_ROOTS` to comma-separated absolute directories containing
 
 `source_path` is required. Optional fields are `recursive`, `workspace_id`, `chunking_profile`, `model_profile`, and `dry_run`. The response reports `indexed`, selected profiles, `dry_run`, and a `documents` array with `doc_id`, `source_path`, `chunks_indexed`, `skipped`, `skip_reason`, and `assets_found`.
 
-A dry run parses and chunks without provider calls, database operations, or asset writes. A real run requires a ready model profile and persists vectors to its storage target. Unchanged documents are skipped without embedding or replacement writes. Supported types include text, Markdown, HTML, PDF, DOCX, and source/config files; PPTX is planned as RDP-16.
+A dry run parses and chunks without provider calls, database operations, or asset writes. A real run requires a ready model profile and persists vectors to its storage target. Unchanged documents are skipped without embedding or replacement writes. Supported types include text, Markdown, HTML, PDF, DOCX, PPTX, and source/config files.
 
 Application ingestion INFO logs report stages, counts, and elapsed times, omitting paths, IDs, and document text. DOCX library source-path logging is tracked separately as LOG-01.
 
@@ -68,3 +68,5 @@ rtk proxy mvn test
 The normal suite uses offline fixtures and mocks. Live provider/database checks require explicit opt-in and controlled fixture workspaces. Source lives under `src/main/kotlin/com/dex/ragpoc/`, tests under `src/test/kotlin/com/dex/ragpoc/`.
 
 See [architecture](docs/architecture.md), [delivery plan](docs/PLAN.md), [current phase](docs/work_current_phase.md), and [backlog](docs/next_phase.md) for evidence and remaining work.
+
+PPTX extraction follows slide and stored shape order, including tables, nested groups, existing speaker notes, and hidden slides. Chunks stay within one slide; citation page numbers are slide numbers. Embedded PNG/JPEG/GIF pictures use private assets with links to chunks on the same slide. Linked and unsupported pictures retain unavailable anchors. Blank slides retain markers. Package validation bounds ZIP/XML expansion and rejects corrupt, encrypted, or macro-enabled input. Visual reading-order inference, rendering, OCR, charts, and binary PowerPoint files are outside this extractor.
