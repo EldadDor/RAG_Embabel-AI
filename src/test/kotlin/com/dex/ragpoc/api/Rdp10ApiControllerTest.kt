@@ -57,8 +57,8 @@ class Rdp10ApiControllerTest {
         mockMvc
             .perform(get("/workspaces"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.principal.displayName").value("Local Developer"))
-            .andExpect(jsonPath("$.workspaces[0].workspaceId").value("alpha"))
+            .andExpect(jsonPath("$.principal.display_name").value("Local Developer"))
+            .andExpect(jsonPath("$.workspaces[0].workspace_id").value("alpha"))
     }
 
     @Test
@@ -105,8 +105,8 @@ class Rdp10ApiControllerTest {
             .perform(post("/chat").contentType("application/json").content("""{"question":"What changed?","includeDebug":true}"""))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.grounded").value(true))
-            .andExpect(jsonPath("$.sessionId").value("session-1"))
-            .andExpect(jsonPath("$.sources[0].chunkId").value("chunk"))
+            .andExpect(jsonPath("$.session_id").value("session-1"))
+            .andExpect(jsonPath("$.sources[0].chunk_id").value("chunk"))
     }
 
     @Test
@@ -116,6 +116,6 @@ class Rdp10ApiControllerTest {
         mockMvc
             .perform(post("/chat").contentType("application/json").content("""{"question":"What changed?","includeDebug":false}"""))
             .andExpect(status().isBadGateway)
-            .andExpect(jsonPath("$.code").value("upstream_provider_error"))
+            .andExpect(jsonPath("$.code").value("upstream_unavailable"))
     }
 }

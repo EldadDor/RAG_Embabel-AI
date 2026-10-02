@@ -22,6 +22,43 @@ The Kotlin implementation uses the current Python route modules as source: `api/
 
 ## Exact behavioral evidence
 
+### Frontend wire compatibility (RDP-18)
+
+The current local Python frontend and backend sources were compared on
+2026-10-02. Public workspace/session/chat JSON uses snake-case keys; internal
+Kotlin property names and persistence serialization remain unchanged.
+
+- `GET /workspaces`: `principal.display_name`; workspace entries contain
+  `workspace_id`, `display_name`, and `role`.
+- `GET /chat/sessions?workspace_id=...`: bare array with `session_id`,
+  `workspace_id`, `title`, `last_preview`, and RFC 3339 `updated_at` strings.
+  Details add `summary` and chronological `turns` with `role`, `content`,
+  and RFC 3339 `created_at` strings.
+- Chat requests accept `question`, `top_k`, `include_debug`, `workspace_id`,
+  `session_id`, `chunking_profile`, and `model_profile`. Legacy camelCase chat
+  input aliases remain supported. Omit `session_id` for a new chat and reuse
+  the returned ID for continuation. New chats persist after successful answer
+  completion; cancellation/provider failure does not persist partial answers.
+- Completed responses and SSE metadata use `session_id`; citations contain
+  `doc_id`, `chunk_id`, `source_path`, title/page/section/score/snippet. The current
+  chat implementation does not attach source asset references; the frontend
+  treats omitted `assets` as empty. Asset enrichment is separate follow-up scope.
+  Retrieval reads Python's metadata `doc_id` with a fallback to existing Kotlin
+  metadata `document_id`, preserving citation identity across both row formats.
+- SSE has ordered `answer`, terminal `meta` or `error`, then `done` events.
+  Post-start errors use `code=stream_interrupted` and a safe `message`, followed
+  by `done.reason=error`. Successful completion uses `done.reason=completed`.
+  Responses supply `Cache-Control: no-cache` and `X-Accel-Buffering: no`.
+- Missing, foreign, archived, and wrong-workspace continuation IDs have the
+  masked 404 `resource_not_found` envelope before streaming begins. Missing
+  required query parameters and malformed JSON use safe 422 validation errors.
+
+`FrontendCompatibilityTest` exercises Boot's actual MVC/JSON configuration with
+real controllers/services and offline repository/provider boundaries. Seeded
+Python-shaped records prove contract handling, not live Python-to-Kotlin HTTP
+readback. Parallel deployment prerequisites and remaining runtime acceptance
+are described in the README and [RDP-18 design](rdp18_design.md).
+
 - Grounded generation uses numbered context passages and the source system prompt.
 - Direct chat-service no-context behavior is `I don't know based on the indexed documents.`
 - The API unit test also injects a mock with `I don't have enough information in the indexed documents to answer this question.` This is a fixture-specific value, not evidence of the concrete chat-service result. Kotlin should preserve the actual service behavior and separately test the response shape for injected responses.

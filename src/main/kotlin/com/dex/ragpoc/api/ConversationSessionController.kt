@@ -5,11 +5,12 @@ import com.dex.ragpoc.conversation.SessionDetail
 import com.dex.ragpoc.domain.ChatSession
 import com.dex.ragpoc.domain.ConversationTurn
 import com.dex.ragpoc.identity.PrincipalResolver
+import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
-import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -20,25 +21,25 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
 data class ChatSessionSummaryResponse(
-    val sessionId: String,
-    val workspaceId: String,
+    @get:JsonProperty("session_id") val sessionId: String,
+    @get:JsonProperty("workspace_id") val workspaceId: String,
     val title: String,
-    val lastPreview: String?,
-    val updatedAt: Instant?,
+    @get:JsonProperty("last_preview") val lastPreview: String?,
+    @get:JsonProperty("updated_at") val updatedAt: Instant?,
 )
 
 data class ChatTurnResponse(
     val role: String,
     val content: String,
-    val createdAt: Instant?,
+    @get:JsonProperty("created_at") val createdAt: Instant?,
 )
 
 data class ChatSessionDetailResponse(
-    val sessionId: String,
-    val workspaceId: String,
+    @get:JsonProperty("session_id") val sessionId: String,
+    @get:JsonProperty("workspace_id") val workspaceId: String,
     val title: String,
-    val lastPreview: String?,
-    val updatedAt: Instant?,
+    @get:JsonProperty("last_preview") val lastPreview: String?,
+    @get:JsonProperty("updated_at") val updatedAt: Instant?,
     val summary: String?,
     val turns: List<ChatTurnResponse>,
 )
@@ -47,7 +48,6 @@ data class RenameChatSessionRequest(
     @field:NotBlank @field:Size(max = 200) val title: String,
 )
 
-@Validated
 @RestController
 class ConversationSessionController(
     private val principals: PrincipalResolver,
@@ -55,7 +55,7 @@ class ConversationSessionController(
 ) {
     @GetMapping("/chat/sessions")
     fun list(
-        @RequestParam @NotBlank workspaceId: String,
+        @RequestParam("workspace_id") @NotBlank workspaceId: String,
         request: HttpServletRequest,
     ): List<ChatSessionSummaryResponse> = sessions.list(principals.resolve(request), workspaceId).map(::summaryResponse)
 
@@ -68,7 +68,7 @@ class ConversationSessionController(
     @PatchMapping("/chat/sessions/{sessionId}")
     fun rename(
         @PathVariable sessionId: String,
-        @RequestBody requestBody: RenameChatSessionRequest,
+        @Valid @RequestBody requestBody: RenameChatSessionRequest,
         request: HttpServletRequest,
     ): Map<String, Boolean> {
         sessions.rename(principals.resolve(request), sessionId, requestBody.title)

@@ -4,6 +4,7 @@ import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.config.RagOperation
 import com.dex.ragpoc.config.RagOutcome
 import com.dex.ragpoc.config.RagTelemetry
+import com.dex.ragpoc.conversation.SessionNotFoundException
 import com.dex.ragpoc.domain.ChatSession
 import com.dex.ragpoc.domain.ConversationSummary
 import com.dex.ragpoc.domain.ConversationTurn
@@ -13,6 +14,7 @@ import com.dex.ragpoc.providers.ChatGateway
 import com.dex.ragpoc.retrieval.RetrievalResult
 import com.dex.ragpoc.retrieval.RetrievalService
 import com.dex.ragpoc.workspace.WorkspaceAccessService
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -23,15 +25,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 data class ChatAnswer(
     val answer: String,
     val grounded: Boolean,
-    val sessionId: String,
+    @get:JsonProperty("session_id") val sessionId: String,
     val sources: List<ChatSource>,
     val debug: Map<String, Any?>? = null,
 )
 
 data class ChatSource(
-    val documentId: String,
-    val chunkId: String,
-    val sourcePath: String,
+    @get:JsonProperty("doc_id") val documentId: String,
+    @get:JsonProperty("chunk_id") val chunkId: String,
+    @get:JsonProperty("source_path") val sourcePath: String,
     val title: String?,
     val page: Int?,
     val section: String?,
@@ -123,7 +125,13 @@ class ChatService(
                     }
             }.onErrorResume {
                 Flux.just(
-                    ChatStreamEvent("error", mapOf("detail" to "Chat stream failed")),
+                    ChatStreamEvent(
+                        "error",
+                        mapOf(
+                            "code" to "stream_interrupted",
+                            "message" to "The answer stream was interrupted. Please try again.",
+                        ),
+                    ),
                     ChatStreamEvent("done", mapOf("reason" to "error")),
                 )
             }
@@ -207,7 +215,7 @@ class ChatService(
             "sources" to
                 sources.map {
                     mapOf(
-                        "document_id" to it.documentId,
+                        "doc_id" to it.documentId,
                         "chunk_id" to it.chunkId,
                         "source_path" to it.sourcePath,
                         "title" to it.title,
@@ -245,8 +253,8 @@ class ChatService(
                 } else {
                     conversations.findActiveOwned(requested, principal.subject)
                 }
-            ) ?: throw IllegalArgumentException("Chat session was not found")
-        require(session.workspaceId == workspaceId) { "Chat session does not belong to this workspace" }
+            ) ?: throw SessionNotFoundException()
+        if (session.workspaceId != workspaceId) throw SessionNotFoundException()
         return session
     }
 

@@ -2,17 +2,18 @@ package com.dex.ragpoc.api
 
 import com.dex.ragpoc.identity.PrincipalResolver
 import com.dex.ragpoc.workspace.WorkspaceAccessService
+import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 
 data class PrincipalSummaryResponse(
-    val displayName: String,
+    @get:JsonProperty("display_name") val displayName: String,
 )
 
 data class WorkspaceSummaryResponse(
-    val workspaceId: String,
-    val displayName: String,
+    @get:JsonProperty("workspace_id") val workspaceId: String,
+    @get:JsonProperty("display_name") val displayName: String,
     val role: String,
 )
 

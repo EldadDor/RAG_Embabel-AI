@@ -84,7 +84,7 @@ class JdbcRetrievalRepository(
                 val metadata = objectMapper.readValue(rs.getString("metadata"), object : TypeReference<Map<String, Any?>>() {})
                 RetrievedChunk(
                     chunkId = metadata["chunk_id"]?.toString() ?: rs.getObject("id").toString(),
-                    documentId = metadata["document_id"]?.toString().orEmpty(),
+                    documentId = (metadata["doc_id"] ?: metadata["document_id"])?.toString().orEmpty(),
                     sourcePath = metadata["source_path"]?.toString() ?: rs.getString("source").orEmpty(),
                     text = rs.getString("content"),
                     score = rs.getDouble("score"),

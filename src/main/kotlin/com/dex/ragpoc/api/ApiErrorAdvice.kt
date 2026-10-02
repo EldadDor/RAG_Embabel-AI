@@ -9,7 +9,9 @@ import com.dex.ragpoc.ingestion.IngestionProviderException
 import com.dex.ragpoc.workspace.WorkspaceAccessDeniedException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
@@ -35,14 +37,19 @@ class ApiErrorAdvice {
         error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "unsupported_media_type", "The requested media type cannot be displayed.")
 
     @ExceptionHandler(ChatProviderException::class)
-    fun chatProviderFailure() =
-        error(HttpStatus.BAD_GATEWAY, "upstream_provider_error", "The chat provider could not complete the request.")
+    fun chatProviderFailure() = error(HttpStatus.BAD_GATEWAY, "upstream_unavailable", "The answer service is temporarily unavailable.")
 
     @ExceptionHandler(IngestionProviderException::class)
     fun ingestionProviderFailure() =
         error(HttpStatus.BAD_GATEWAY, "upstream_provider_error", "The embedding provider could not complete the request.")
 
-    @ExceptionHandler(MethodArgumentNotValidException::class, HandlerMethodValidationException::class, IllegalArgumentException::class)
+    @ExceptionHandler(
+        MethodArgumentNotValidException::class,
+        HandlerMethodValidationException::class,
+        IllegalArgumentException::class,
+        MissingServletRequestParameterException::class,
+        HttpMessageNotReadableException::class,
+    )
     fun invalidRequest() = error(HttpStatus.UNPROCESSABLE_ENTITY, "invalid_request", "The request is invalid.")
 
     private fun error(

@@ -107,7 +107,8 @@ class ChatServiceTest {
         val events = service.stream("Question", principal, "alpha").collectList().block()!!
 
         assertEquals(listOf("answer", "error", "done"), events.map { it.name })
-        assertEquals("Chat stream failed", (events[1].data as Map<*, *>)["detail"])
+        assertEquals("stream_interrupted", (events[1].data as Map<*, *>)["code"])
+        assertEquals("The answer stream was interrupted. Please try again.", (events[1].data as Map<*, *>)["message"])
         verify(exactly = 0) { conversations.appendTurn(any(), any(), any(), any()) }
         verify(exactly = 0) { conversations.create(any()) }
     }

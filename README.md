@@ -48,13 +48,39 @@ Application ingestion INFO logs report stages, counts, and elapsed times, omitti
 | POST | `/chat` | Grounded answer with citations and optional debug data |
 | POST | `/chat/stream` | SSE answer deltas, metadata, completion, and error events |
 | GET | `/workspaces` | Accessible workspaces |
-| GET | `/chat/sessions?workspaceId=...` | List workspace sessions |
+| GET | `/chat/sessions?workspace_id=...` | List workspace sessions |
 | GET | `/chat/sessions/{sessionId}` | Session details and turns |
 | PATCH | `/chat/sessions/{sessionId}` | Rename a session |
 | DELETE | `/chat/sessions/{sessionId}` | Archive a session |
 | GET | `/workspaces/{workspaceId}/assets/{assetId}` | Authorized asset read with ETag support |
 
-For chat, send `{"question":"What does the document describe?"}`. Optional fields are `topK`, `includeDebug`, `sessionId`, `workspaceId`, `chunkingProfile`, and `modelProfile`. Sessions and assets enforce access checks. See [API and evaluation contract](docs/api_evaluation_contract.md).
+For chat, send `{"question":"What does the document describe?"}`. Optional fields are `top_k`, `include_debug`, `session_id`, `workspace_id`, `chunking_profile`, and `model_profile`. CamelCase chat request aliases remain accepted for existing callers. Workspace, session, and completed-chat responses use the Python/frontend snake-case contract, including `display_name`, `session_id`, `last_preview`, `updated_at`, `created_at`, and citation `doc_id`. This corrects the earlier incompatible camelCase responses. Sessions and assets enforce access checks. See [API and evaluation contract](docs/api_evaluation_contract.md).
+
+## Serving the frontend with both backends
+
+Python and Kotlin must listen on separate ports when running on the same host.
+For example, keep Python on `8000` and launch Kotlin with `API_PORT=8001`.
+The current Python-project Vite configuration proxies `/workspaces` and `/chat`
+to `localhost:8000`; point those routes at the selected backend or a common
+reverse proxy/load balancer when testing parallel operation. Route asset requests
+under `/workspaces` through that same upstream.
+
+Both backends must use the same PostgreSQL host/port/database/schema and the
+same user subject (`LOCAL_SUBJECT` locally; trusted gateway identity in the
+workplace). Align `DEFAULT_WORKSPACE_ID`, chunking/model profiles, and retention
+settings. Membership and chat ownership are stored in PostgreSQL, so sequential
+requests can change backend without a process-local session. The gateway must
+strip browser-supplied identity headers and inject the same authenticated subject
+for both backends. SSE proxy buffering must be disabled; Kotlin supplies
+`Cache-Control: no-cache` and `X-Accel-Buffering: no`.
+
+Use a shared asset directory/storage mount accessible to both services; identical
+relative asset roots in different checkouts do not reference the same files.
+Load balancing does not serialize overlapping requests to the same chat or
+ingestion replacements of the same document. Those operations need an agreed
+coordination policy before allowing overlapping writes. Offline contract tests
+cover frontend requests and durable-session boundaries; real cross-backend
+HTTP/load-balancer acceptance remains a separate runtime check.
 
 ## Development
 
