@@ -340,7 +340,8 @@ class DocumentIngestionServiceTest {
         verify(exactly = 1) { assets.upsert(any()) }
         verify(atLeast = 1) { assets.linkToChunk("workspace", "default", result.documentId, any(), any(), any()) }
         assertTrue(linkedChunk.captured.startsWith(result.documentId))
-        assertEquals(hash("workspace:default:${result.documentId}:image-0000"), storedAsset.captured.assetId)
+        assertEquals(64, storedAsset.captured.assetId.length)
+        assertEquals(storedAsset.captured.contentHash, storedAsset.captured.storageKey)
     }
 
     @Test

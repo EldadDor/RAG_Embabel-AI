@@ -1,5 +1,6 @@
 package com.dex.ragpoc.ingestion
 
+import com.dex.ragpoc.catalog.JdbcDocumentPublicationRepository
 import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.domain.Document
 import com.dex.ragpoc.domain.DocumentAsset
@@ -54,6 +55,9 @@ class Rdp09LiveIngestionIntegrationTest {
     private lateinit var properties: AppProperties
 
     @Autowired
+    private lateinit var publications: JdbcDocumentPublicationRepository
+
+    @Autowired
     private lateinit var transactions: TransactionTemplate
 
     @Test
@@ -72,7 +76,7 @@ class Rdp09LiveIngestionIntegrationTest {
                     SELECT count(*) FROM rag.${properties.database.chunkTable}
                     WHERE metadata ->> 'workspace_id' = ?
                       AND metadata ->> 'chunking_profile' = ?
-                      AND metadata ->> 'document_id' = ?
+                      AND COALESCE(metadata ->> 'doc_id', metadata ->> 'document_id') = ?
                     """.trimIndent(),
                     Int::class.java,
                     WORKSPACE_ID,
@@ -219,6 +223,7 @@ class Rdp09LiveIngestionIntegrationTest {
                 failingAssets,
                 rollbackProperties,
                 transactions,
+                publications = publications,
             )
 
         assertFailsWith<IllegalStateException> {
@@ -251,6 +256,7 @@ class Rdp09LiveIngestionIntegrationTest {
         assets,
         assetProperties,
         transactions,
+        publications = publications,
     )
 
     private fun storedChunkCount(documentId: String): Int =
@@ -260,7 +266,7 @@ class Rdp09LiveIngestionIntegrationTest {
                 SELECT count(*) FROM rag.${properties.database.chunkTable}
                 WHERE metadata ->> 'workspace_id' = ?
                   AND metadata ->> 'chunking_profile' = ?
-                  AND metadata ->> 'document_id' = ?
+                  AND COALESCE(metadata ->> 'doc_id', metadata ->> 'document_id') = ?
                 """.trimIndent(),
                 Int::class.java,
                 WORKSPACE_ID,

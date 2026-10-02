@@ -2,8 +2,8 @@
 
 **Status:** proposed for approval
 
-**Last reviewed:** 2026-09-27
-**Source revision:** `RAG-dev-plane` `92a594e8e3bec694b1a893563f63d8a220605dcd`
+**Last reviewed:** 2026-10-03
+**Source revision:** original baseline `92a594e8e3bec694b1a893563f63d8a220605dcd`; NP-20 catalog reviewed at local Python `8599b26` and later `a7e6ce0`. RDP-20 catalog architecture is implemented with offline evidence; live acceptance remains pending.
 
 The Kotlin service ports the Python backend's behavior and uses its existing PostgreSQL/pgvector database as an externally managed shared store. Spring AI handles model-provider calls. Application-owned JDBC repositories handle every read and write to the `rag` schema.
 
@@ -26,6 +26,10 @@ HTTP API
 ## Database contract
 
 RAG-dev-plane owns `rag.schema_migrations` and the five applied migration versions: `001_baseline`, `002_workspace_authorization`, `003_chunking_profiles`, `004_document_assets`, and `005_model_profiles`. Kotlin performs no migration or DDL. On startup it validates the schema, configured vector dimension, and selected ready model profile.
+
+Python additionally applied `006_document_index_metadata` locally on 2026-10-02. RDP-20 now validates and uses `document_index_metadata`, `document_index_assets`, `document_list_revisions`, and `document_catalog_state` without DDL. Upgraded writers require the new schema; listing enablement and operator certification remain separate gates. Local Python certification does not establish readiness in other environments or certify later writes from older Kotlin code. See [implementation verification](rdp20_verification.md); real shared-runtime acceptance remains pending.
+
+The catalog service exposes authorized read-only snapshot/keyset queries and Python-compatible signed cursors. Shared publication transactions update vectors, safe display metadata, model-owned asset references and revisions together. Ingestion, corpus warming and cleanup use Python-compatible advisory locks, preserve other profiles' source/assets, canonical `doc_id` metadata and legacy read compatibility. Failed replacement preserves the old publication; unchanged ingestion and warming preserve source recency; dry runs publish nothing. See [RDP-20 plan](rdp20_catalog_parity_plan.md) for API fields, signing/locking protocol, migration prerequisites and rollback restrictions.
 
 `rag.document_chunks` is not a generic Spring AI collection. Its primary key is Python UUIDv5 derived from the stable chunk ID; its JSONB metadata controls workspace/profile scope and carries provenance, assets, and code metadata. Queries use pgvector cosine distance and PostgreSQL full-text search, with application-side RRF. The Kotlin JDBC repository is therefore the interoperability boundary.
 

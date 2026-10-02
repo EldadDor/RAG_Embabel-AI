@@ -21,6 +21,7 @@ class ProfiledEmbeddingService(
     private val embeddingModel: EmbeddingModel,
     private val properties: AppProperties,
     private val telemetry: RagTelemetry? = null,
+    private val documentWarmer: DocumentProfileWarmer? = null,
 ) {
     fun query(
         profileName: String,
@@ -62,6 +63,23 @@ class ProfiledEmbeddingService(
     }
 
     fun storageTarget(profileName: String): String = resolveReady(profileName).storageTarget
+
+    /** Operator entry point for corpus warming; the single-argument overload remains a provider probe. */
+    fun warm(
+        targetProfile: String,
+        sourceProfile: String,
+        workspace: String,
+        dryRun: Boolean,
+    ): DocumentWarmResult =
+        requireNotNull(documentWarmer) { "Document warming is not configured" }.warm(targetProfile, sourceProfile, workspace, dryRun)
+
+    internal fun documentForWarming(
+        profile: ModelProfile,
+        text: String,
+    ): List<Float> {
+        validateProfile(profile)
+        return embed(profile, text, "document")
+    }
 
     private fun validateProfile(profile: ModelProfile) {
         require(Regex("^[a-z_][a-z0-9_]*$").matches(profile.storageTarget)) {

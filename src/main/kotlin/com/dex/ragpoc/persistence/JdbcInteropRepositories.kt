@@ -433,19 +433,25 @@ class JdbcSourceDocumentRepository(
                 documentId,
             ).firstOrNull()
 
-    fun upsert(document: SourceDocument) {
+    fun upsert(
+        document: SourceDocument,
+        preserveExisting: Boolean = false,
+    ) {
+        val conflict =
+            if (preserveExisting) {
+                "DO NOTHING"
+            } else {
+                """DO UPDATE
+            SET root_path = EXCLUDED.root_path, source_path = EXCLUDED.source_path,
+                source_type = EXCLUDED.source_type, content_hash = EXCLUDED.content_hash,
+                metadata = EXCLUDED.metadata, updated_at = now()"""
+            }
         jdbcTemplate.update(
             """
             INSERT INTO $schema.source_documents
                 (workspace_id, chunking_profile, doc_id, root_path, source_path, source_type, content_hash, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb)
-            ON CONFLICT (workspace_id, chunking_profile, doc_id) DO UPDATE
-            SET root_path = EXCLUDED.root_path,
-                source_path = EXCLUDED.source_path,
-                source_type = EXCLUDED.source_type,
-                content_hash = EXCLUDED.content_hash,
-                metadata = EXCLUDED.metadata,
-                updated_at = now()
+            ON CONFLICT (workspace_id, chunking_profile, doc_id) $conflict
             """.trimIndent(),
             document.workspaceId,
             document.chunkingProfile,
@@ -571,7 +577,7 @@ class JdbcChunkRepository(
             "DELETE FROM $schema.${requireIdentifier(
                 "model profile storage target",
                 storageTarget,
-            )} WHERE metadata ->> 'workspace_id' = ? AND metadata ->> 'chunking_profile' = ? AND metadata ->> 'document_id' = ?",
+            )} WHERE metadata ->> 'workspace_id' = ? AND COALESCE(metadata ->> 'chunking_profile','default') = ? AND COALESCE(metadata ->> 'doc_id',metadata ->> 'document_id') = ?",
             workspaceId,
             chunkingProfile,
             documentId,
@@ -606,19 +612,7 @@ class JdbcDocumentAssetRepository(
                 (asset_id, workspace_id, chunking_profile, doc_id, storage_key, content_hash, media_type,
                  byte_size, original_name, relationship_id, ordinal, width, height, alt_text, caption, anchor_block_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (asset_id) DO UPDATE
-            SET storage_key = EXCLUDED.storage_key,
-                content_hash = EXCLUDED.content_hash,
-                media_type = EXCLUDED.media_type,
-                byte_size = EXCLUDED.byte_size,
-                original_name = EXCLUDED.original_name,
-                relationship_id = EXCLUDED.relationship_id,
-                ordinal = EXCLUDED.ordinal,
-                width = EXCLUDED.width,
-                height = EXCLUDED.height,
-                alt_text = EXCLUDED.alt_text,
-                caption = EXCLUDED.caption,
-                anchor_block_id = EXCLUDED.anchor_block_id
+            ON CONFLICT (asset_id) DO NOTHING
             """.trimIndent(),
             asset.assetId,
             asset.workspaceId,

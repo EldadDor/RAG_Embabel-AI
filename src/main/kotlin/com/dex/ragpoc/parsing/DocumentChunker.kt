@@ -36,6 +36,8 @@ class DocumentChunker(
         require(defaultProfileName in profiles) { "Default chunking profile is not configured: $defaultProfileName" }
     }
 
+    fun supportsProfile(name: String): Boolean = name in profiles
+
     fun chunk(
         document: Document,
         profileName: String? = null,

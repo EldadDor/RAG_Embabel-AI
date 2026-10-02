@@ -16,6 +16,7 @@ data class AppProperties(
     val chat: Chat = Chat(),
     val embedding: Embedding = Embedding(),
     val ingestion: Ingestion = Ingestion(),
+    val documents: Documents = Documents(),
 ) {
     data class Auth(
         val mode: String = "local",
@@ -95,4 +96,11 @@ data class AppProperties(
     data class Ingestion(
         val allowedRoots: List<Path> = emptyList(),
     )
+
+    data class Documents(
+        val enabled: Boolean = false,
+        val cursorSecret: String = "",
+    ) {
+        override fun toString(): String = "Documents(enabled=$enabled, cursorSecret=<redacted>)"
+    }
 }

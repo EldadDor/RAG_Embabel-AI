@@ -2,6 +2,8 @@
 
 **Source revision:** `RAG-dev-plane` `92a594e8e3bec694b1a893563f63d8a220605dcd`
 
+**NP-20 update:** G1/G2 approved 2026-10-03; implementation and offline evidence in [catalog verification](rdp20_verification.md). Python `8599b26` and later `a7e6ce0` were inspected. Live catalog acceptance remains pending.
+
 **Purpose:** define the Kotlin contract and evaluation evidence selected for RDP-01. It deliberately selects high-value behavior rather than requiring a line-by-line port of the Python test suite.
 
 ## API contract suite
@@ -14,11 +16,12 @@
 | Safe errors | Validation gives the safe 422 envelope. Provider failure gives the safe 502 envelope and never exposes cause text. Cover authorization, missing resource, and unsupported asset media with their mapped errors. |
 | Sessions | List by authorized workspace; read, rename, and archive owned active sessions. A foreign, missing, or archived session has the same masked 404 outcome. |
 | Workspaces and identity | Local principal is server-derived. Gateway mode requires trusted identity. Workspace membership is checked for every workspace-scoped operation. |
+| Document catalog (RDP-20 offline verified) | `GET /workspaces/{workspace_id}/documents`: limit 25 by default, 1–100; optional bounded cursor and model/chunking profiles. Exact snake-case scope/items/page envelope, safe title/basename/type, nullable UTC ingestion time, exact scoped count including zero, newest-first/null-last bytewise keysets, principal-bound signed 15-minute cursors, decimal-string revision. Cover safe 409 changed-list and 503 unavailable, existing auth/validation errors, protected cache headers, no private fields/provider/filesystem calls, and Python token fixtures. Real cross-runtime runtime acceptance remains pending. |
 | Ingestion | `POST /ingest` accepts snake-case `source_path`, `recursive`, `workspace_id`, `chunking_profile`, `model_profile`, and `dry_run`; it returns total `indexed` and per-document ID/path/chunk/skip/asset fields. Workspace membership is checked before path admission, and configured allowed roots bound the source. Cover invalid/outside paths, invalid profile syntax, dry run purity, deterministic recursive scans, selected model storage target, unchanged documents, and result shape. |
 | Assets | `GET /workspaces/{workspaceId}/assets/{assetId}` requires membership; permits PNG/JPEG/GIF/WebP only after byte-signature validation; supports ETag/304 and private, inline, `nosniff` headers. |
 | Model-profile warmer | Local-only endpoint honors workspace authorization and dry run; non-local environments reject it. |
 
-The Kotlin implementation uses the current Python route modules as source: `api/routers/health.py`, `chat.py`, `ingest.py`, `workspaces.py`, `assets.py`, and `admin.py`. The older `api/routers/router.py` is a reduced duplicate and is not contract authority.
+The Kotlin implementation uses the current Python route modules as source: `api/routers/health.py`, `chat.py`, `ingest.py`, `workspaces.py`, `assets.py`, and `admin.py`; RDP-20 adds `documents.py` and `services/document_catalog.py` as sources. The older `api/routers/router.py` is a reduced duplicate and is not contract authority.
 
 ## Exact behavioral evidence
 
@@ -81,6 +84,7 @@ The Kotlin evaluation runner performs each retrieval twice and records determini
 | `tests/test_chat_stream.py` | Named SSE events, whitespace preservation, meta-before-done order. |
 | `tests/test_workspace_authorization.py`, `tests/test_services.py` | Principal/workspace authorization and session scope. |
 | `tests/test_assets.py` | Asset authorization, signature validation, ETag, and safe media handling. |
+| `tests/test_document_catalog.py`, `test_document_catalog_store.py`, `test_document_publication.py` | Planned RDP-20 route/cursor/revision/count fixtures plus publication, rollback, warming, cleanup and cross-profile asset ownership. Actual SQL locking/snapshot acceptance is separately opt-in. |
 | `tests/test_evaluation.py` | JSONL validation, deterministic metrics, report format, API adapter. |
 | `evaluation/*.jsonl` | Retrieval and generated-answer quality regression coverage. |
 

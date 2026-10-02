@@ -35,8 +35,7 @@ class ContentAddressedAssetStore(
 
     fun store(asset: DocumentAsset): StoredAsset {
         validate(listOf(asset))
-        val extension = extensionFor(asset.mediaType, asset.originalName)
-        val key = "${asset.contentHash.substring(0, 2)}/${asset.contentHash}$extension"
+        val key = asset.contentHash
         val target = resolve(key)
         Files.createDirectories(target.parent)
         if (!Files.exists(target)) {
@@ -60,23 +59,10 @@ class ContentAddressedAssetStore(
     }
 
     private fun resolve(key: String): Path {
-        val path = root.resolve(key).normalize()
+        val relative = if (Regex("^[0-9a-f]{64}$").matches(key)) "${key.take(2)}/$key" else key
+        val path = root.resolve(relative).normalize()
         require(path.startsWith(root)) { "Asset path escapes the configured storage root" }
         return path
-    }
-
-    private fun extensionFor(
-        mediaType: String,
-        originalName: String?,
-    ): String {
-        val fromName = originalName?.substringAfterLast('.', "")?.lowercase()?.takeIf { it.matches(Regex("[a-z0-9]{1,10}")) }
-        return fromName?.let { ".$it" } ?: when (mediaType) {
-            "image/png" -> ".png"
-            "image/jpeg" -> ".jpg"
-            "image/gif" -> ".gif"
-            "image/webp" -> ".webp"
-            else -> ""
-        }
     }
 
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }

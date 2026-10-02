@@ -23,9 +23,23 @@ class ContentAddressedAssetStoreTest {
 
         val stored = store.store(asset)
 
-        assertEquals("${asset.contentHash.take(2)}/${asset.contentHash}.png", stored.storageKey)
+        assertEquals(asset.contentHash, stored.storageKey)
+        assertEquals(temporaryDirectory.resolve(asset.contentHash.take(2)).resolve(asset.contentHash).toAbsolutePath(), stored.absolutePath)
         assertTrue(stored.absolutePath.startsWith(temporaryDirectory.toAbsolutePath()))
         assertTrue(Files.readAllBytes(stored.absolutePath).contentEquals(bytes))
+    }
+
+    @Test
+    fun `reads existing Kotlin extension keys and Python hash keys without rewriting files`() {
+        val bytes = byteArrayOf(1, 2, 3)
+        val key = hash(bytes)
+        val directory = Files.createDirectories(temporaryDirectory.resolve(key.take(2)))
+        Files.write(directory.resolve("$key.png"), bytes)
+        Files.write(directory.resolve(key), bytes)
+        val store = ContentAddressedAssetStore(AppProperties(assets = AppProperties.Assets(storageRoot = temporaryDirectory)))
+        assertTrue(store.read("${key.take(2)}/$key.png").contentEquals(bytes))
+        assertTrue(store.read(key).contentEquals(bytes))
+        assertFailsWith<IllegalArgumentException> { store.read("../outside") }
     }
 
     @Test

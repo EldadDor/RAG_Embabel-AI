@@ -1,5 +1,6 @@
 package com.dex.ragpoc.ingestion
 
+import com.dex.ragpoc.catalog.JdbcDocumentPublicationRepository
 import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.parsing.DocumentChunker
 import com.dex.ragpoc.parsing.DocumentLoaderRegistry
@@ -35,6 +36,8 @@ class Rdp16LiveIngestionIntegrationTest {
     @Autowired private lateinit var chunks: JdbcChunkRepository
 
     @Autowired private lateinit var assets: JdbcDocumentAssetRepository
+
+    @Autowired private lateinit var publications: JdbcDocumentPublicationRepository
 
     @Autowired private lateinit var properties: AppProperties
 
@@ -102,6 +105,7 @@ class Rdp16LiveIngestionIntegrationTest {
             assetRepository,
             properties,
             transactions,
+            publications = publications,
         )
     }
 

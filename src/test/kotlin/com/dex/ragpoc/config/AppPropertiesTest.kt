@@ -9,6 +9,22 @@ import org.springframework.boot.context.properties.source.MapConfigurationProper
 
 class AppPropertiesTest {
     @Test
+    fun `binds catalog settings with disabled defaults and redacted signing secret`() {
+        assertFalse(AppProperties().documents.enabled)
+        val source =
+            MapConfigurationPropertySource(
+                mapOf(
+                    "app.documents.enabled" to "true",
+                    "app.documents.cursor-secret" to "offline-secret",
+                ),
+            )
+        val properties = Binder(source).bind("app", AppProperties::class.java).get()
+        assertTrue(properties.documents.enabled)
+        assertEquals("offline-secret", properties.documents.cursorSecret)
+        assertFalse(properties.toString().contains("offline-secret"))
+    }
+
+    @Test
     fun `empty ingestion roots remain closed`() {
         val source = MapConfigurationPropertySource(mapOf("app.ingestion.allowed-roots" to ""))
         val properties = Binder(source).bind("app", AppProperties::class.java).get()

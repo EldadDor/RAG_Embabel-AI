@@ -1,5 +1,10 @@
 # Example override for the active POST /ingest route. This file is not loaded automatically.
 app:
+  # Listing stays disabled until Python migration/reconciliation and cross-runtime acceptance.
+  # Supply the same DOCUMENT_LIST_CURSOR_SECRET to both services for load-balanced cursors.
+  documents:
+    enabled: ${DOCUMENT_LIST_ENABLED:false}
+    cursor-secret: ${DOCUMENT_LIST_CURSOR_SECRET:}
   ingestion:
     allowed-roots:
       - C:/path/to/documents

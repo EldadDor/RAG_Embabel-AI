@@ -1,5 +1,10 @@
 package com.dex.ragpoc.api
 
+import com.dex.ragpoc.catalog.CatalogSnapshot
+import com.dex.ragpoc.catalog.DocumentCatalogReader
+import com.dex.ragpoc.catalog.DocumentCatalogService
+import com.dex.ragpoc.catalog.DocumentListChanged
+import com.dex.ragpoc.catalog.DocumentSummary
 import com.dex.ragpoc.chat.ChatService
 import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.config.JsonConfiguration
@@ -9,8 +14,10 @@ import com.dex.ragpoc.domain.ConversationTurn
 import com.dex.ragpoc.domain.ModelProfile
 import com.dex.ragpoc.domain.RetrievedChunk
 import com.dex.ragpoc.identity.PrincipalResolver
+import com.dex.ragpoc.parsing.DocumentChunker
 import com.dex.ragpoc.persistence.AuthorizedWorkspace
 import com.dex.ragpoc.persistence.JdbcConversationRepository
+import com.dex.ragpoc.persistence.JdbcModelProfileRepository
 import com.dex.ragpoc.persistence.JdbcWorkspaceRepository
 import com.dex.ragpoc.providers.ChatGateway
 import com.dex.ragpoc.retrieval.RetrievalResult
@@ -68,7 +75,12 @@ class FrontendCompatibilityTest {
         context.servletContext = MockServletContext()
         context.register(HttpConfiguration::class.java)
         context.refresh()
-        mvc = MockMvcBuilders.webAppContextSetup(context).build()
+        mvc =
+            MockMvcBuilders
+                .webAppContextSetup(
+                    context,
+                ).addFilters<org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder>(DocumentCatalogHeadersFilter())
+                .build()
         conversations = context.getBean(JdbcConversationRepository::class.java)
         retrieval = context.getBean(RetrievalService::class.java)
         gateway = context.getBean(ChatGateway::class.java)
@@ -76,6 +88,8 @@ class FrontendCompatibilityTest {
         every { workspaces.listForSubject("local-dev") } returns listOf(AuthorizedWorkspace("python-space", "Python Workspace", "owner"))
         every { workspaces.isAuthorized("local-dev", "python-space") } returns true
         every { workspaces.isAuthorized("local-dev", "denied") } returns false
+        val profiles = context.getBean(JdbcModelProfileRepository::class.java)
+        every { profiles.get("bge-m3") } returns ModelProfile("bge-m3", "ollama", "bge", 2, "chunks")
         every { retrieval.retrieve(any(), "python-space", any(), any(), any()) } returns
             RetrievalResult(
                 listOf(RetrievedChunk("chunk-1", "doc-1", "guide.md", "Evidence", .9)),
@@ -116,6 +130,111 @@ class FrontendCompatibilityTest {
 
     @AfterEach
     fun tearDown() = context.close()
+
+    @Test
+    fun `gateway authentication failures on catalog use protected safe envelope`() {
+        val gatewayProperties = AppProperties(auth = AppProperties.Auth(mode = "gateway"))
+        val controller =
+            DocumentCatalogController(
+                PrincipalResolver(gatewayProperties),
+                context.getBean(WorkspaceAccessService::class.java),
+                context.getBean(DocumentCatalogService::class.java),
+            )
+        val gatewayMvc =
+            MockMvcBuilders
+                .standaloneSetup(controller)
+                .setControllerAdvice(ApiErrorAdvice())
+                .addFilters<org.springframework.test.web.servlet.setup.StandaloneMockMvcBuilder>(DocumentCatalogHeadersFilter())
+                .build()
+        gatewayMvc
+            .perform(get("/workspaces/python-space/documents"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("authentication_required"))
+            .andExpect(header().string("Cache-Control", "private, no-store"))
+            .andExpect(header().string("Vary", "Cookie, Authorization"))
+    }
+
+    @Test
+    fun `document panel receives safe snake case metadata without private fields`() {
+        val catalog = context.getBean(DocumentCatalogReader::class.java)
+        every { catalog.page("python-space", "bge-m3", "default", 25, null) } returns
+            CatalogSnapshot(
+                "18",
+                listOf(DocumentSummary("doc", "מסמך", "guide.pptx", "powerpoint", null, 0)),
+            )
+        mvc
+            .perform(get("/workspaces/python-space/documents"))
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "private, no-store"))
+            .andExpect(header().string("Vary", "Cookie, Authorization"))
+            .andExpect(jsonPath("$.workspace_id").value("python-space"))
+            .andExpect(jsonPath("$.scope.model_profile").value("bge-m3"))
+            .andExpect(jsonPath("$.scope.chunking_profile").value("default"))
+            .andExpect(jsonPath("$.items[0].doc_id").value("doc"))
+            .andExpect(jsonPath("$.items[0].indexed_chunk_count").value(0))
+            .andExpect(jsonPath("$.items[0].last_ingested_at").value(null as Any?))
+            .andExpect(jsonPath("$.items[0].document_type").value("powerpoint"))
+            .andExpect(jsonPath("$.items[0].source_path").doesNotExist())
+            .andExpect(jsonPath("$.page.list_revision").value("18"))
+            .andExpect(jsonPath("$.page.has_more").value(false))
+            .andExpect(jsonPath("$.page.generated_at").isString)
+    }
+
+    @Test
+    fun `document query errors and revoked membership always have private headers`() {
+        for ((field, value) in listOf(
+            "limit" to "0",
+            "limit" to "101",
+            "limit" to "NaN",
+            "cursor" to "",
+            "model_profile" to "bad profile",
+            "chunking_profile" to "unknown",
+        )) {
+            mvc
+                .perform(get("/workspaces/python-space/documents").param(field, value))
+                .andExpect(status().isUnprocessableEntity)
+                .andExpect(jsonPath("$.code").value("invalid_request"))
+                .andExpect(header().string("Cache-Control", "private, no-store"))
+        }
+        mvc
+            .perform(get("/workspaces/denied/documents"))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("workspace_access_denied"))
+            .andExpect(header().string("Vary", "Cookie, Authorization"))
+        verify(exactly = 0) { context.getBean(DocumentCatalogReader::class.java).page(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `document panel paginates and restarts on shared revision change`() {
+        val catalog = context.getBean(DocumentCatalogReader::class.java)
+        every { catalog.page("python-space", "bge-m3", "default", 1, null) } returns
+            CatalogSnapshot(
+                "18",
+                listOf(DocumentSummary("a", "A", "a.txt", "text", timestamp, 1), DocumentSummary("b", "B", "b.txt", "text", null, 0)),
+            )
+        val response =
+            mvc
+                .perform(get("/workspaces/python-space/documents").param("limit", "1"))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.page.has_more").value(true))
+                .andReturn()
+                .response.contentAsString
+        val cursor = mapper().readTree(response)["page"]["next_cursor"].asText()
+        every { catalog.page("python-space", "bge-m3", "default", 1, any()) } throws DocumentListChanged()
+        mvc
+            .perform(get("/workspaces/python-space/documents").param("limit", "1").param("cursor", cursor))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("document_list_changed"))
+            .andExpect(jsonPath("$.message").value("The document list changed. Reload it to continue."))
+            .andExpect(header().string("Cache-Control", "private, no-store"))
+        every { catalog.page("python-space", "bge-m3", "default", 25, null) } throws
+            org.springframework.dao.DataAccessResourceFailureException("private password")
+        mvc
+            .perform(get("/workspaces/python-space/documents"))
+            .andExpect(status().isServiceUnavailable)
+            .andExpect(jsonPath("$.code").value("document_list_unavailable"))
+            .andExpect(jsonPath("$.message").value("The document list is temporarily unavailable."))
+    }
 
     @Test
     fun `frontend can discover workspaces and read a Python-origin chat`() {
@@ -355,9 +474,17 @@ class FrontendCompatibilityTest {
         WorkspaceAccessService::class,
         ConversationSessionService::class,
         ChatService::class,
+        DocumentCatalogController::class,
+        DocumentCatalogService::class,
     )
     class HttpConfiguration {
-        @Bean fun properties() = AppProperties()
+        @Bean fun properties() = AppProperties(documents = AppProperties.Documents(true, "offline-cursor-secret-at-least-32-bytes"))
+
+        @Bean fun catalog(): DocumentCatalogReader = mockk()
+
+        @Bean fun profiles(): JdbcModelProfileRepository = mockk()
+
+        @Bean fun chunker() = DocumentChunker()
 
         @Bean fun workspaces(): JdbcWorkspaceRepository = mockk()
 

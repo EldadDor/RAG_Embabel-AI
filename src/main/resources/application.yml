@@ -63,6 +63,9 @@ management:
 
 app:
   environment: ${APP_ENV:local}
+  documents:
+    enabled: ${DOCUMENT_LIST_ENABLED:false}
+    cursor-secret: ${DOCUMENT_LIST_CURSOR_SECRET:}
   auth:
     mode: ${AUTH_MODE:local}
     local-subject: ${LOCAL_SUBJECT:local-dev}

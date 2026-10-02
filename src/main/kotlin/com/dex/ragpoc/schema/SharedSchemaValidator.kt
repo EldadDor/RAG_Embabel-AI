@@ -17,6 +17,7 @@ private val requiredVersions =
         "003_chunking_profiles",
         "004_document_assets",
         "005_model_profiles",
+        "006_document_index_metadata",
     )
 
 data class SchemaModelProfile(
@@ -67,6 +68,10 @@ class SharedSchemaValidationService(
                 "$schema.chunk_assets",
                 "$schema.model_profiles",
                 "$schema.embedding_cache",
+                "$schema.document_index_metadata",
+                "$schema.document_index_assets",
+                "$schema.document_list_revisions",
+                "$schema.document_catalog_state",
             )
         val missingRelations = metadata.missingRelations(relations)
         if (missingRelations.isNotEmpty()) {
@@ -81,6 +86,57 @@ class SharedSchemaValidationService(
             throw SharedSchemaValidationException(
                 "PostgreSQL migrations are not applied; missing versions: ${missingVersions.sorted().joinToString()}.",
             )
+        }
+
+        val catalogColumns =
+            mapOf(
+                "document_index_metadata" to
+                    mapOf(
+                        "workspace_id" to "text",
+                        "model_profile" to "text",
+                        "chunking_profile" to "text",
+                        "doc_id" to "text",
+                        "title" to "text",
+                        "file_name" to "text",
+                        "document_type" to "text",
+                        "content_hash" to "text",
+                        "last_ingested_at" to "timestamp with time zone",
+                        "indexed_chunk_count" to "bigint",
+                        "source_path" to "text",
+                        "root_path" to "text",
+                        "updated_at" to "timestamp with time zone",
+                    ),
+                "document_index_assets" to
+                    mapOf(
+                        "workspace_id" to "text",
+                        "model_profile" to "text",
+                        "chunking_profile" to "text",
+                        "doc_id" to "text",
+                        "asset_id" to "text",
+                    ),
+                "document_list_revisions" to
+                    mapOf(
+                        "workspace_id" to "text",
+                        "model_profile" to "text",
+                        "chunking_profile" to "text",
+                        "revision" to "bigint",
+                        "updated_at" to "timestamp with time zone",
+                    ),
+                "document_catalog_state" to
+                    mapOf(
+                        "singleton" to "boolean",
+                        "ready" to "boolean",
+                        "updated_at" to "timestamp with time zone",
+                    ),
+            )
+        catalogColumns.forEach { (table, columns) ->
+            columns.forEach { (column, expected) ->
+                if (metadata.columnType("$schema.$table", column) != expected) {
+                    throw SharedSchemaValidationException(
+                        "Catalog column $schema.$table.$column must be $expected; " + "apply Python migration 006.",
+                    )
+                }
+            }
         }
 
         val actualEmbeddingType = metadata.columnType("$schema.$chunkTable", "embedding")

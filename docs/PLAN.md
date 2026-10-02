@@ -2,9 +2,9 @@
 
 **Status:** revised for approval
 
-**Last reviewed:** 2026-09-27
+**Last reviewed:** 2026-10-03
 
-**Authoritative source:** `EldadDor/RAG-dev-plane` at `92a594e8e3bec694b1a893563f63d8a220605dcd`.
+**Authoritative source:** original parity baseline `92a594e8e3bec694b1a893563f63d8a220605dcd`; document-catalog update reviewed from local Python `8599b26` and later `a7e6ce0`. Existing completed task evidence remains historical; RDP-20 implements NP-20 with offline evidence and separately pending live acceptance.
 
 ## Task naming
 
@@ -22,7 +22,8 @@ Embabel is deferred until all RDP tasks pass. It must not alter the deterministi
 
 | Area | Python behavior that Kotlin must reproduce |
 | --- | --- |
-| Database | `rag.schema_migrations` holds versions `001_baseline` to `005_model_profiles`; startup validates them and all required tables. `document_chunks` uses Python UUIDv5 IDs, JSONB metadata, `vector(n)`, source path, page, and chunk index. |
+| Database | Python now owns versions `001_baseline` through `006_document_index_metadata`. RDP-20 must extend Kotlin's current five-version validator and publication writers to the four new catalog relations. `document_chunks` uses Python UUIDv5 IDs, JSONB metadata, `vector(n)`, source path, page, and chunk index. |
+| Document catalog | Workspace-authorized `GET /workspaces/{workspace_id}/documents` returns safe display metadata, exact model/chunking-scoped counts, nullable successful ingestion time, signed 15-minute keyset cursors and revision-based 409 recovery. PostgreSQL publication writers coordinate metadata, revisions and model-owned asset references atomically. |
 | Configuration | Pydantic loads `.env` in Python. Kotlin expresses the equivalent active configuration through standard Spring Boot `application.yml` and profile YAML. |
 | File registry | Supports `.md`, `.mdx`, `.html`, `.htm`, `.pdf`, `.docx`, `.txt`, `.py`, `.js`, `.jsx`, `.ts`, `.tsx`, `.java`, `.kt`, `.kts`, `.cs`, `.go`, `.rs`, `.sql`, `.json`, `.yaml`, `.yml`, and `.toml`; recursive scans skip `.git`, `.idea`, `.gradle`, `.venv`, `build`, `node_modules`, `out`, and `target`. |
 | PDF | Reads text page by page, preserves page break markers and page metadata, and produces stable document identity/provenance. |
@@ -213,6 +214,12 @@ After RDP-15, evaluate an isolated Embabel workflow with explicit tool allow-lis
 | Grafana | Dashboards for HTTP, ingestion, parsing, chunks/assets, retrieval, cache, model calls, database, streams, and errors. |
 | Langfuse adapter | Disabled locally; activated only by workplace configuration and policy. |
 
+### RDP-20 — Recent document catalog and shared publication parity
+
+The detailed [RDP-20 revision](rdp20_catalog_parity_plan.md) defines the new Python NP-20 contract and Kotlin change inventory. Implement schema/config compatibility, DATA-01 canonical document keys, profile-aware publication/asset ownership, warming/cleanup, shared advisory locks, and then the provider-free catalog route with cross-runtime cursors. Frontend size/type colors remain frontend configuration. Python alone owns migration 006, historical reconciliation and certification; PPTX remains public type `unknown`.
+
+**Done when:** offline API/lifecycle fixtures pass; separately approved PostgreSQL checks prove shared publication/count/asset/revision/locking and cursor compatibility; the existing frontend panel works against Kotlin; browser and configured load-balancer acceptance are recorded separately. Scope, dependency order, rollback restrictions and G1/G2 proposals are in the revision. General concurrent chat writes remain RDP-19.
+
 ## Approval point
 
-Approve this breakdown to start RDP-01 through RDP-03. The first implementation output will be API/golden evaluation evidence, Spring YAML alignment, and the local observability foundation. It will not modify the shared database.
+The original RDP-01–RDP-03 approval point is historical. RDP-20 G1/G2 were approved on 2026-10-03; implementation and offline evidence are in [verification](rdp20_verification.md). Live acceptance, G3 push/merge and G4 closure remain separate. Kotlin performs no shared-schema migration.

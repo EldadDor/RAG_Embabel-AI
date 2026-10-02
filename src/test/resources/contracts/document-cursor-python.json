@@ -1,0 +1,19 @@
+{
+  "source": "RAG-dev-plane a7e6ce0 DocumentCursor.encode",
+  "secret": "offline-shared-cursor-secret-32-bytes",
+  "subject_input": "\u05de\u05e9\u05ea\u05de\u05e9",
+  "payload": {
+    "v": 1,
+    "workspace": "local",
+    "model": "bge-m3",
+    "chunking": "default",
+    "subject": "f475755baacf2e40bc50e322f8321ead17b2fb794609053ecdc2ac5a3bc01a50",
+    "limit": 1,
+    "revision": "18",
+    "last_id": "\u05de\u05e1\u05de\u05da\ud83d\ude00",
+    "last_time": "2026-10-02T08:30:15.123456Z",
+    "issued": 1791021600,
+    "expires": 1791022500
+  },
+  "token": "eyJjaHVua2luZyI6ImRlZmF1bHQiLCJleHBpcmVzIjoxNzkxMDIyNTAwLCJpc3N1ZWQiOjE3OTEwMjE2MDAsImxhc3RfaWQiOiJcdTA1ZGVcdTA1ZTFcdTA1ZGVcdTA1ZGFcdWQ4M2RcdWRlMDAiLCJsYXN0X3RpbWUiOiIyMDI2LTEwLTAyVDA4OjMwOjE1LjEyMzQ1NloiLCJsaW1pdCI6MSwibW9kZWwiOiJiZ2UtbTMiLCJyZXZpc2lvbiI6IjE4Iiwic3ViamVjdCI6ImY0NzU3NTViYWFjZjJlNDBiYzUwZTMyMmY4MzIxZWFkMTdiMmZiNzk0NjA5MDUzZWNkYzJhYzVhM2JjMDFhNTAiLCJ2IjoxLCJ3b3Jrc3BhY2UiOiJsb2NhbCJ9.5598d3751522b8060d751eeb200b17b67a378c33b6f8b12d3c3b49394356ccf6"
+}

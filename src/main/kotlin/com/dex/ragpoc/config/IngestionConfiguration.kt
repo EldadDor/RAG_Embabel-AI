@@ -1,5 +1,6 @@
 package com.dex.ragpoc.config
 
+import com.dex.ragpoc.catalog.JdbcDocumentPublicationRepository
 import com.dex.ragpoc.ingestion.ContentAddressedAssetStore
 import com.dex.ragpoc.ingestion.DocumentIngestionService
 import com.dex.ragpoc.ingestion.EmbeddingGateway
@@ -36,6 +37,7 @@ class IngestionConfiguration {
         transactions: TransactionTemplate,
         telemetry: RagTelemetry,
         profiles: ProfiledEmbeddingService,
+        publications: JdbcDocumentPublicationRepository,
     ): DocumentIngestionService =
         DocumentIngestionService(
             loaders,
@@ -51,5 +53,6 @@ class IngestionConfiguration {
             IngestionModelTargetResolver { name ->
                 profiles.resolveReady(name).let { IngestionModelTarget(it.storageTarget, it.dimensions) }
             },
+            publications,
         )
 }

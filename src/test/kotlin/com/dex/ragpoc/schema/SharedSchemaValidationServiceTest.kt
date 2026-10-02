@@ -28,6 +28,27 @@ class SharedSchemaValidationServiceTest {
     }
 
     @Test
+    fun `requires catalog migration even with listing disabled`() {
+        val error =
+            assertThrows<SharedSchemaValidationException> {
+                SharedSchemaValidationService(
+                    FakeSchemaMetadataReader(appliedVersions = migrationVersions - "006_document_index_metadata"),
+                    AppProperties(),
+                ).validate()
+            }
+        assertTrue(error.message!!.contains("006_document_index_metadata"))
+    }
+
+    @Test
+    fun `rejects a malformed catalog column before writers run`() {
+        val error =
+            assertThrows<SharedSchemaValidationException> {
+                SharedSchemaValidationService(FakeSchemaMetadataReader(badCatalogColumn = true), AppProperties()).validate()
+            }
+        assertTrue(error.message!!.contains("document_index_metadata.indexed_chunk_count"))
+    }
+
+    @Test
     fun `reports an embedding dimension mismatch precisely`() {
         val error =
             assertThrows<SharedSchemaValidationException> {
@@ -58,6 +79,7 @@ class SharedSchemaValidationServiceTest {
         private val appliedVersions: Set<String> = migrationVersions,
         private val embeddingType: String = "vector(1024)",
         private val profile: SchemaModelProfile = SchemaModelProfile("bge-m3", 1024, "document_chunks_bge_m3", "ready"),
+        private val badCatalogColumn: Boolean = false,
     ) : SchemaMetadataReader {
         override fun missingRelations(relations: Set<String>): Set<String> = emptySet()
 
@@ -66,7 +88,15 @@ class SharedSchemaValidationServiceTest {
         override fun columnType(
             relation: String,
             column: String,
-        ): String = embeddingType
+        ): String =
+            when (column) {
+                "embedding" -> embeddingType
+                "last_ingested_at", "updated_at" -> "timestamp with time zone"
+                "revision" -> "bigint"
+                "indexed_chunk_count" -> if (badCatalogColumn) "integer" else "bigint"
+                "singleton", "ready" -> "boolean"
+                else -> "text"
+            }
 
         override fun modelProfile(
             schema: String,
@@ -82,6 +112,7 @@ class SharedSchemaValidationServiceTest {
                 "003_chunking_profiles",
                 "004_document_assets",
                 "005_model_profiles",
+                "006_document_index_metadata",
             )
     }
 }

@@ -1,5 +1,7 @@
 package com.dex.ragpoc.ingestion
 
+import com.dex.ragpoc.catalog.JdbcDocumentPublicationRepository
+import com.dex.ragpoc.catalog.PythonJson
 import com.dex.ragpoc.config.AppProperties
 import com.dex.ragpoc.config.RagOperation
 import com.dex.ragpoc.config.RagTelemetry
@@ -101,6 +103,7 @@ class DocumentIngestionService(
     private val telemetry: RagTelemetry? = null,
     private val modelTargets: IngestionModelTargetResolver =
         IngestionModelTargetResolver { IngestionModelTarget(properties.database.chunkTable, properties.database.vectorDimension) },
+    private val publications: JdbcDocumentPublicationRepository? = null,
 ) {
     private val logger = LoggerFactory.getLogger(DocumentIngestionService::class.java)
 
@@ -111,6 +114,7 @@ class DocumentIngestionService(
         val started = System.nanoTime()
         val source = request.sourcePath
         val directory = Files.isDirectory(source)
+        val scanStarted = if (directory && !request.dryRun) publications?.scanTime() else null
         val paths = if (directory) loaderRegistry.scanDirectory(source, recursive) else listOf(source)
         val realRoot = if (directory) source.toRealPath() else null
         val modelProfile = request.modelProfile ?: properties.rag.modelProfile
@@ -149,6 +153,16 @@ class DocumentIngestionService(
                     }
                 }
             }
+        if (directory && !request.dryRun && publications != null) {
+            cleanupMissingSources(
+                request.workspaceId,
+                source,
+                request.chunkingProfile,
+                modelProfile = modelProfile,
+                recursive = recursive,
+                scanStarted = scanStarted,
+            )
+        }
         val indexed = documents.sumOf(IngestionDocumentResult::chunksIndexed)
         val skipped = documents.count(IngestionDocumentResult::skipped)
         logger.info(
@@ -229,8 +243,21 @@ class DocumentIngestionService(
             )
         }
         val modelTarget = modelTargets.resolve(modelProfile)
-        val existing = sourceDocuments.find(request.workspaceId, request.chunkingProfile, document.documentId)
-        if (existing?.contentHash == document.contentHash && existing?.metadata?.get("model_profile") == modelProfile) {
+        val unchanged =
+            if (publications != null) {
+                publications.unchanged(
+                    request.workspaceId,
+                    modelProfile,
+                    request.chunkingProfile,
+                    document.documentId,
+                    document.contentHash,
+                )
+            } else {
+                val existing = sourceDocuments.find(request.workspaceId, request.chunkingProfile, document.documentId)
+                val sameHash = existing?.contentHash == document.contentHash
+                sameHash && existing?.metadata?.get("model_profile") == modelProfile
+            }
+        if (unchanged) {
             telemetry?.count("rag_ingestion_skips_total")
             logger.info("Ingestion skipped unchanged source: modelProfile={}", modelProfile)
             return IngestionResult(document.documentId, changed = false, dryRun = false, 0, document.assets.size, "unchanged")
@@ -266,7 +293,9 @@ class DocumentIngestionService(
         }
         val storedAssets = document.assets.map { it to assetStore.store(it) }
         val persistenceStarted = System.nanoTime()
-        transactions.executeWithoutResult { replace(request, document, preparedChunks, embeddings, storedAssets, modelTarget) }
+        var published = true
+        transactions.executeWithoutResult { published = replace(request, document, preparedChunks, embeddings, storedAssets, modelTarget) }
+        if (!published) return IngestionResult(document.documentId, false, false, 0, document.assets.size, "unchanged")
         logger.info(
             "Ingestion persistence completed: chunks={}, assets={}, durationMs={}",
             preparedChunks.size,
@@ -293,12 +322,43 @@ class DocumentIngestionService(
         rootPath: Path,
         chunkingProfile: String = "default",
         dryRun: Boolean = false,
+        modelProfile: String = properties.rag.modelProfile,
+        recursive: Boolean = true,
+        scanStarted: java.time.Instant? = null,
     ): CleanupResult {
         val normalizedRoot = rootPath.toAbsolutePath().normalize()
         require(
             java.nio.file.Files
                 .isDirectory(normalizedRoot),
         ) { "Cleanup root is not a directory: $normalizedRoot" }
+        if (publications != null) {
+            val observed =
+                publications
+                    .listForRoot(workspaceId, modelProfile, chunkingProfile, normalizedRoot.toString())
+                    .filter { row ->
+                        val path = Path.of(row.sourcePath).toAbsolutePath().normalize()
+                        path.startsWith(normalizedRoot) && (recursive || path.parent == normalizedRoot) && !Files.isRegularFile(path) &&
+                            (scanStarted == null || !row.updatedAt.isAfter(scanStarted))
+                    }
+            if (dryRun) return CleanupResult(observed.map { it.documentId }, true)
+            val target = modelTargets.resolve(modelProfile)
+            val deleted = mutableListOf<String>()
+            transactions.executeWithoutResult {
+                publications.lockProfile(modelProfile)
+                publications.requireReady(modelProfile)
+                observed.forEach { row ->
+                    publications.lockDocument(workspaceId, chunkingProfile, row.documentId)
+                    // A publication refreshed after the scan is not stale evidence.
+                    if (!Files.isRegularFile(Path.of(row.sourcePath)) &&
+                        publications.deletePublication(workspaceId, modelProfile, chunkingProfile, row.documentId, row.updatedAt)
+                    ) {
+                        chunks.deleteForDocument(workspaceId, chunkingProfile, row.documentId, target.storageTarget)
+                        deleted += row.documentId
+                    }
+                }
+            }
+            return CleanupResult(deleted, false)
+        }
         val stale =
             sourceDocuments
                 .listForRoot(workspaceId, chunkingProfile, normalizedRoot.toString())
@@ -330,9 +390,24 @@ class DocumentIngestionService(
         embeddings: List<List<Float>>,
         storedAssets: List<Pair<com.dex.ragpoc.domain.DocumentAsset, StoredAsset>>,
         modelTarget: IngestionModelTarget,
-    ) {
+    ): Boolean {
+        val modelProfile = request.modelProfile ?: properties.rag.modelProfile
+        publications?.let {
+            it.lockProfile(modelProfile)
+            it.lockDocument(request.workspaceId, request.chunkingProfile, document.documentId)
+            it.requireReady(modelProfile)
+            val alreadyPublished =
+                it.unchanged(
+                    request.workspaceId,
+                    modelProfile,
+                    request.chunkingProfile,
+                    document.documentId,
+                    document.contentHash,
+                )
+            if (alreadyPublished) return false
+        }
         chunks.deleteForDocument(request.workspaceId, request.chunkingProfile, document.documentId, modelTarget.storageTarget)
-        assets.deleteForDocument(request.workspaceId, request.chunkingProfile, document.documentId)
+        if (publications == null) assets.deleteForDocument(request.workspaceId, request.chunkingProfile, document.documentId)
         sourceDocuments.upsert(
             SourceDocument(
                 request.workspaceId,
@@ -348,6 +423,10 @@ class DocumentIngestionService(
                 document.metadata + mapOf("model_profile" to (request.modelProfile ?: properties.rag.modelProfile)),
             ),
         )
+        val assetIdsByChunk =
+            storedAssets
+                .groupBy { (asset, _) -> relatedChunk(asset, preparedChunks)?.chunkId }
+                .mapValues { (_, values) -> values.map { (asset, _) -> assetId(request, document, asset) } }
         preparedChunks.zip(embeddings).forEach { (chunk, embedding) ->
             chunks.upsert(
                 StoredChunk(
@@ -358,8 +437,11 @@ class DocumentIngestionService(
                             mapOf(
                                 "workspace_id" to request.workspaceId,
                                 "chunking_profile" to request.chunkingProfile,
-                                "document_id" to document.documentId,
+                                "doc_id" to document.documentId,
                                 "chunk_id" to chunk.chunkId,
+                                "source_type" to document.sourceType.name.lowercase(),
+                                "title" to document.title,
+                                "related_asset_ids" to assetIdsByChunk[chunk.chunkId].orEmpty(),
                             ),
                     source = chunk.sourcePath,
                     pageNumber = chunk.page,
@@ -370,6 +452,17 @@ class DocumentIngestionService(
                 modelTarget.dimensions,
             )
         }
+        publications?.publish(
+            request.workspaceId,
+            modelProfile,
+            request.chunkingProfile,
+            modelTarget.storageTarget,
+            document,
+            request.rootPath
+                ?.toAbsolutePath()
+                ?.normalize()
+                ?.toString(),
+        )
         storedAssets.forEach { (asset, stored) ->
             val assetId = assetId(request, document, asset)
             assets.upsert(
@@ -403,6 +496,14 @@ class DocumentIngestionService(
                 )
             }
         }
+        publications?.replaceAssetReferences(
+            request.workspaceId,
+            modelProfile,
+            request.chunkingProfile,
+            document.documentId,
+            storedAssets.map { (asset, _) -> assetId(request, document, asset) },
+        )
+        return true
     }
 
     /** Mirrors Python's cross-runtime asset identity and nearest-chunk association. */
@@ -412,8 +513,21 @@ class DocumentIngestionService(
         asset: com.dex.ragpoc.domain.DocumentAsset,
     ): String =
         sha256(
-            "${request.workspaceId}:${request.chunkingProfile}:${document.documentId}:${asset.anchorId}"
-                .toByteArray(StandardCharsets.UTF_8),
+            PythonJson
+                .encode(
+                    listOf(
+                        request.workspaceId,
+                        request.chunkingProfile,
+                        document.documentId,
+                        document.contentHash ?: sha256(document.content.toByteArray(StandardCharsets.UTF_8)),
+                        asset.contentHash,
+                        asset.anchorId,
+                        asset.altText,
+                        asset.caption,
+                    ),
+                    ascii = false,
+                    spaced = true,
+                ).toByteArray(StandardCharsets.UTF_8),
         )
 
     private fun relatedChunk(
